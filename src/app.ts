@@ -8,7 +8,8 @@ const app: Application = express();
 
 routes(app);
 
-connectToMongoDB();
+const mongoURI = process.env.PLAYGROUND_MONGO_URI || '';
+connectToMongoDB(mongoURI);
 
 const port = process.env.PORT || 3000;
 app.listen(port, () => console.log(`Listening on port ${port}...`));
