@@ -1,4 +1,4 @@
-import { createLogger, format, transports } from 'winston';
+import { createLogger, format, transports, Logger } from 'winston';
 
 // Define logging formats
 const fileLogFormat = format.combine(
@@ -13,12 +13,23 @@ const consoleLogFormat = format.combine(
 );
 
 // Set up the logger
-export const logger = createLogger({
+export const logger: Logger = createLogger({
   level: 'info',
   transports: [
     new transports.File({
       filename: 'logs/error.log',
       level: 'error',
+      format: fileLogFormat
+    }),
+    new transports.File({
+      filename: 'logs/combined.log',
+      format: fileLogFormat
+    })
+  ],
+  // Handle uncaught exceptions
+  exceptionHandlers: [
+    new transports.File({
+      filename: 'logs/uncaughtExceptions.log',
       format: fileLogFormat
     }),
     new transports.File({
@@ -35,4 +46,6 @@ if (process.env.NODE_ENV !== 'production') {
       format: consoleLogFormat
     })
   );
+  // Handle uncaught exceptions
+  logger.exceptions.handle(new transports.Console());
 }
