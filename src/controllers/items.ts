@@ -1,11 +1,7 @@
-import { Request, Response, NextFunction } from 'express';
+import { RequestHandler } from 'express';
 import { Item } from '../models/Item';
 
-export const getItems = async (
-  _req: Request,
-  res: Response,
-  next: NextFunction
-) => {
+export const getItems: RequestHandler = async (_req, res, next) => {
   try {
     const items = await Item.find();
     res.send(items);
