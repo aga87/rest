@@ -18,7 +18,7 @@ const consoleLogFormat = format.combine(
 
 // Set up the logger
 export const logger: Logger = createLogger({
-  level: 'info',
+  level: 'http',
   transports: [
     new transports.File({
       filename: 'logs/error.log',
