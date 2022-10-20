@@ -36,6 +36,17 @@ export const logger: Logger = createLogger({
       filename: 'logs/combined.log',
       format: fileLogFormat
     })
+  ],
+  // Handle uncaught promise rejections
+  rejectionHandlers: [
+    new transports.File({
+      filename: 'logs/unhandledRejections.log',
+      format: fileLogFormat
+    }),
+    new transports.File({
+      filename: 'logs/combined.log',
+      format: fileLogFormat
+    })
   ]
 });
 
@@ -48,4 +59,6 @@ if (process.env.NODE_ENV !== 'production') {
   );
   // Handle uncaught exceptions
   logger.exceptions.handle(new transports.Console());
+  // Handle uncaught promise rejections
+  logger.rejections.handle(new transports.Console());
 }
