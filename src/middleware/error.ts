@@ -1,11 +1,7 @@
-import { Request, Response, NextFunction } from 'express';
+import { ErrorRequestHandler } from 'express';
+import { logger } from '../startup/logger';
 
-export const errorMiddleware = (
-  err: unknown,
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  // TODO: Here we should also log the error
+export const errorMiddleware: ErrorRequestHandler = (err, req, res, next) => {
+  logger.error('Unexpected server error', err);
   res.status(500).send('Unexpected server error');
 };
