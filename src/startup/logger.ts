@@ -8,8 +8,12 @@ const fileLogFormat = format.combine(
 );
 
 const consoleLogFormat = format.combine(
+  format.timestamp({ format: 'DD-MM-YYYY HH:mm:ss' }),
   format.colorize(), // has to be called first
-  format.simple()
+  format.simple(),
+  format.printf((msg) => {
+    return `[LOGGER] ${msg.timestamp} ${msg.level} ${msg.message}`;
+  })
 );
 
 // Set up the logger
