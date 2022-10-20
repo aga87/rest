@@ -7,6 +7,11 @@ const fileLogFormat = format.combine(
   format.prettyPrint()
 );
 
+const consoleLogFormat = format.combine(
+  format.colorize(), // has to be called first
+  format.simple()
+);
+
 // Set up the logger
 export const logger = createLogger({
   level: 'info',
@@ -22,3 +27,12 @@ export const logger = createLogger({
     })
   ]
 });
+
+// Additionally log to the console, if not in production
+if (process.env.NODE_ENV !== 'production') {
+  logger.add(
+    new transports.Console({
+      format: consoleLogFormat
+    })
+  );
+}
