@@ -28,3 +28,18 @@ export const getItem: RequestHandler = async (req, res, next) => {
     next(err);
   }
 };
+
+export const deleteItem: RequestHandler = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const isValid = mongoose.Types.ObjectId.isValid(id);
+    if (!isValid) return res.status(400).send('Invalid ID.');
+
+    const item = await Item.findByIdAndDelete(id);
+    if (!item)
+      return res.status(404).send('The requested resource does not exist.');
+    res.send('The resource was successfully deleted.');
+  } catch (err) {
+    next(err);
+  }
+};
