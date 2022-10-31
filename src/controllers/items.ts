@@ -1,5 +1,5 @@
 import { RequestHandler } from 'express';
-import { Item, createItemSchema } from '../models/Item';
+import { Item, createItemSchema, updateItemSchema } from '../models/Item';
 import { validateSchema } from '../services/joi';
 
 export const getItems: RequestHandler = async (_req, res, next) => {
@@ -45,12 +45,30 @@ export const addItem: RequestHandler = async (req, res, next) => {
   }
 };
 
+export const updateItem: RequestHandler = async (req, res, next) => {
+  const error = validateSchema({
+    reqSchema: req.body,
+    validSchema: updateItemSchema
+  });
+  if (error) return res.status(400).send(error);
+  try {
+    const item = await Item.findByIdAndUpdate(req.params.id, req.body, {
+      new: true
+    });
+    if (!item)
+      return res.status(404).send('Item with the given ID was not found.');
+    res.send(item);
+  } catch (err) {
+    next(err);
+  }
+};
+
 export const deleteItem: RequestHandler = async (req, res, next) => {
   try {
     const { id } = req.params;
     const item = await Item.findByIdAndDelete(id);
     if (!item)
-      return res.status(404).send('The requested resource does not exist.');
+      return res.status(404).send('Item with the given ID was not found.');
     res.send('The resource was successfully deleted.');
   } catch (err) {
     next(err);

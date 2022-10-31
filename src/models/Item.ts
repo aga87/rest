@@ -25,7 +25,18 @@ const itemSchema = new Schema(
 
 export const Item = model('Item', itemSchema);
 
+const titleSchema = Joi.string().trim().max(TITLE_MAX_LENGTH);
+const descriptionSchema = Joi.string()
+  .allow(null, '')
+  .trim()
+  .max(DESC_MAX_LENGTH);
+
 export const createItemSchema = Joi.object({
-  title: Joi.string().trim().max(TITLE_MAX_LENGTH).required(),
-  description: Joi.string().allow(null, '').trim().max(DESC_MAX_LENGTH)
+  title: titleSchema.required(),
+  description: descriptionSchema
+});
+
+export const updateItemSchema = Joi.object({
+  title: titleSchema,
+  description: descriptionSchema
 });
