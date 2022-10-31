@@ -9,8 +9,8 @@ const app: Application = express();
 
 routes(app);
 
-const mongoURI = process.env.PLAYGROUND_MONGO_URI || '';
-connectToMongoDB(mongoURI);
+const { MONGO_URI, PORT } = process.env;
 
-const port = process.env.PORT || 3000;
-app.listen(port, () => logger.info(`Listening on port ${port}...`));
+connectToMongoDB(MONGO_URI || '');
+
+app.listen(PORT, () => logger.info(`Listening on port ${PORT}...`));
