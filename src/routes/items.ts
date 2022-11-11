@@ -5,6 +5,8 @@ import {
   deleteItem,
   getItems,
   getItem,
+  tagItem,
+  untagItem,
   updateItem
 } from '../controllers/items';
 
@@ -19,5 +21,9 @@ router.get('/:id', validateObjectId, getItem);
 router.patch('/:id', validateObjectId, updateItem);
 
 router.delete('/:id', validateObjectId, deleteItem);
+
+router.post('/:id/tags', validateObjectId, tagItem);
+
+router.delete('/:id/tags/:tagId', validateObjectId, untagItem);
 
 export { router as items };

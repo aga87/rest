@@ -18,7 +18,13 @@ const itemSchema = new Schema(
       set: (v: string) => (v === '' ? null : v),
       maxLength: DESC_MAX_LENGTH,
       trim: true
-    }
+    },
+    tags: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: 'Tag'
+      }
+    ]
   },
   { timestamps: true }
 );
