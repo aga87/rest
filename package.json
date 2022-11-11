@@ -7,7 +7,9 @@
     "start": "node dist/app.js",
     "dev": "nodemon src/app.ts",
     "lint": "eslint src/**/*.ts",
-    "build": "tsc -p ."
+    "build": "tsc -p .",
+    "test": "jest --verbose",
+    "test:watch": "npm run test -- --watch --verbose"
   },
   "author": "",
   "license": "ISC",
