@@ -159,4 +159,73 @@ describe('/api/v1/items', () => {
       });
     });
   });
+
+  describe('PATCH /:id', () => {
+    let update: any;
+    let id: any;
+
+    const act = async () =>
+      await request(testServer).patch(`/api/v1/items/${id}`).send(update);
+
+    beforeEach(async () => {
+      // Happy path
+      const item = new Item({
+        title: 'a',
+        description: 'a'
+      });
+      await item.save();
+      id = item._id;
+      update = {
+        title: 'b',
+        description: 'c'
+      } as IItem;
+    });
+
+    it('should return 400 if item title is longer than 50 characters', async () => {
+      update = {
+        title: new Array(52).join('a')
+      };
+      const res = await act();
+      expect(res.status).toBe(400);
+    });
+
+    it('should return 400 if item description is longer than 1000 characters', async () => {
+      update = {
+        description: new Array(1002).join('a')
+      };
+      const res = await act();
+      expect(res.status).toBe(400);
+    });
+
+    it('should return 404 if invalid id is passed', async () => {
+      id = 1;
+      const res = await act();
+      expect(res.status).toBe(404);
+    });
+
+    it('should return 404 if no item with the given id exists', async () => {
+      id = new mongoose.Types.ObjectId();
+      const res = await act();
+      expect(res.status).toBe(404);
+    });
+
+    describe('If the id and update are valid / SUCCESS', () => {
+      it('should save the updated item', async () => {
+        await act();
+        const item = await Item.find({ title: 'b' });
+        expect(item).not.toBeNull();
+      });
+
+      it('should return the updated item', async () => {
+        const res = await act();
+        expect(res.body).toHaveProperty('title', 'b');
+        expect(res.body).toHaveProperty('description', 'c');
+      });
+
+      it('should return 200 status code', async () => {
+        const res = await act();
+        expect(res.status).toBe(200);
+      });
+    });
+  });
 });
