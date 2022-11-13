@@ -6,7 +6,7 @@ import { validateSchema } from '../services/joi';
 
 export const getItems: RequestHandler = async (_req, res, next) => {
   try {
-    const items = await Item.find();
+    const items = await Item.find().populate('tags', '_id name');
     res.send(items);
   } catch (err) {
     next(err);
@@ -16,7 +16,7 @@ export const getItems: RequestHandler = async (_req, res, next) => {
 export const getItem: RequestHandler = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const item = await Item.findById(id);
+    const item = await Item.findById(id).populate('tags', '_id name');
     if (!item)
       return res.status(404).send('Item with the given ID was not found.');
     res.send(item);
@@ -53,7 +53,7 @@ export const updateItem: RequestHandler = async (req, res, next) => {
   try {
     const item = await Item.findByIdAndUpdate(req.params.id, req.body, {
       new: true
-    });
+    }).populate('tags', '_id name');
     if (!item)
       return res.status(404).send('Item with the given ID was not found.');
     res.send(item);
