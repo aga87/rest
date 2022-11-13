@@ -49,4 +49,46 @@ describe('/api/v1/items', () => {
       expect(res.status).toBe(200);
     });
   });
+
+  describe('GET /:id', () => {
+    let id: any;
+    let item: any;
+
+    const act = async () =>
+      await request(testServer).get(`/api/v1/items/${id}`);
+
+    beforeEach(async () => {
+      // Happy path
+      item = new Item({
+        title: 'a',
+        description: 'a'
+      });
+      await item.save();
+      id = item._id;
+    });
+
+    it('should return 404 if invalid id is passed', async () => {
+      id = 1;
+      const res = await act();
+      expect(res.status).toBe(404);
+    });
+
+    it('should return 404 if no item with the given id exists', async () => {
+      id = new mongoose.Types.ObjectId();
+      const res = await act();
+      expect(res.status).toBe(404);
+    });
+
+    describe('If the id is valid and the item exists / SUCCESS', () => {
+      it('should return an item', async () => {
+        const res = await act();
+        expect(res.body).toHaveProperty('title', 'a');
+      });
+
+      it('should return 200 status code', async () => {
+        const res = await act();
+        expect(res.status).toBe(200);
+      });
+    });
+  });
 });

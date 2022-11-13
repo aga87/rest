@@ -16,10 +16,7 @@ export const getItem: RequestHandler = async (req, res, next) => {
     const { id } = req.params;
     const item = await Item.findById(id);
     if (!item)
-      return res
-        .status(404)
-        .send('Not Found: the requested resource does not exist.');
-
+      return res.status(404).send('Item with the given ID was not found.');
     res.send(item);
   } catch (err) {
     next(err);
