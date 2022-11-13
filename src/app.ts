@@ -13,4 +13,6 @@ const { MONGO_URI, PORT } = process.env;
 
 connectToMongoDB(MONGO_URI || '');
 
-app.listen(PORT, () => logger.info(`Listening on port ${PORT}...`));
+export const server = app.listen(PORT, () =>
+  logger.info(`Listening on port ${PORT}...`)
+);
