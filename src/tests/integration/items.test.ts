@@ -91,4 +91,72 @@ describe('/api/v1/items', () => {
       });
     });
   });
+
+  describe('POST /', () => {
+    let newItem: any;
+
+    const act = async () =>
+      await request(testServer).post('/api/v1/items').send(newItem);
+
+    it('should return 400 if title is missing', async () => {
+      newItem = {
+        description: 'a'
+      };
+      const res = await act();
+      expect(res.status).toBe(400);
+    });
+
+    it('should return 400 if item title is longer than 50 characters', async () => {
+      newItem = {
+        title: new Array(52).join('a'),
+        description: 'a'
+      };
+      const res = await act();
+      expect(res.status).toBe(400);
+    });
+
+    it('should return 400 if item description is longer than 1000 characters', async () => {
+      newItem = {
+        title: 'a',
+        description: new Array(1002).join('a')
+      };
+      const res = await act();
+      expect(res.status).toBe(400);
+    });
+
+    describe('If the item is valid / SUCCESS', () => {
+      beforeEach(() => {
+        // Happy path
+        newItem = {
+          title: 'a',
+          description: 'a'
+        } as IItem;
+      });
+
+      it('should save the item', async () => {
+        await act();
+        const item = await Item.find({ title: 'a' });
+        expect(item).not.toBeNull();
+      });
+
+      it('should return the item (with timestamps)', async () => {
+        const res = await act();
+        expect(res.body).toHaveProperty('_id');
+        expect(res.body).toHaveProperty('title', 'a');
+        expect(res.body).toHaveProperty('description', 'a');
+        expect(res.body).toHaveProperty('createdAt');
+        expect(res.body).toHaveProperty('updatedAt');
+      });
+
+      it('should return 201 status code', async () => {
+        const res = await act();
+        expect(res.status).toBe(201);
+      });
+
+      it('should return the URI of the new item resource in the Location header', async () => {
+        const res = await act();
+        expect(res.header.location).toContain(`/api/v1/items/${res.body._id}`);
+      });
+    });
+  });
 });

@@ -33,7 +33,7 @@ export const addItem: RequestHandler = async (req, res, next) => {
   try {
     const result = await item.save();
     res.setHeader(
-      'Location',
+      'location',
       `${process.env.BASE_URL}/${req.originalUrl}/${result._id}`
     );
     res.status(201).send(result);
