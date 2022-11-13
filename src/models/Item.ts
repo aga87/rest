@@ -1,4 +1,4 @@
-import { Schema, model } from 'mongoose';
+import { Schema, model, Types } from 'mongoose';
 import Joi from 'joi';
 
 const TITLE_MAX_LENGTH = 50;
@@ -7,6 +7,7 @@ const DESC_MAX_LENGTH = 1000;
 export interface IItem {
   title: string;
   description: string | null;
+  tags?: Types.ObjectId[];
 }
 
 const itemSchema = new Schema<IItem>(
@@ -23,7 +24,13 @@ const itemSchema = new Schema<IItem>(
       set: (v: string) => (v === '' ? null : v),
       maxLength: DESC_MAX_LENGTH,
       trim: true
-    }
+    },
+    tags: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: 'Tag'
+      }
+    ]
   },
   { timestamps: true }
 );
