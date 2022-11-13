@@ -228,4 +228,47 @@ describe('/api/v1/items', () => {
       });
     });
   });
+
+  describe('DELETE /:id', () => {
+    let id: any;
+
+    const act = async () =>
+      await request(testServer).delete(`/api/v1/items/${id}`).send();
+
+    beforeEach(async () => {
+      // Happy path
+      const item = new Item({
+        title: 'a',
+        description: 'a'
+      });
+      await item.save();
+      id = item._id;
+    });
+
+    it('should return 404 if invalid id is passed', async () => {
+      id = 1;
+      const res = await act();
+      expect(res.status).toBe(404);
+    });
+
+    it('should return 404 if no item with the given id exists', async () => {
+      id = new mongoose.Types.ObjectId();
+      const res = await act();
+      expect(res.status).toBe(404);
+    });
+
+    describe('If item with the given id exists / SUCCESS', () => {
+      it('should delete the genre', async () => {
+        await act();
+        const itemInDB = await Item.findById(id);
+        expect(itemInDB).toBeNull();
+      });
+
+      it('should return 204 status code and no response body', async () => {
+        const res = await act();
+        expect(res.status).toBe(204);
+        expect(res.body).toStrictEqual({});
+      });
+    });
+  });
 });

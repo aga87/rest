@@ -66,7 +66,7 @@ export const deleteItem: RequestHandler = async (req, res, next) => {
     const item = await Item.findByIdAndDelete(id);
     if (!item)
       return res.status(404).send('Item with the given ID was not found.');
-    res.send('The resource was successfully deleted.');
+    res.status(204).send();
   } catch (err) {
     next(err);
   }
