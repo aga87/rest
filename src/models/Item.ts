@@ -1,10 +1,15 @@
 import { Schema, model } from 'mongoose';
 import Joi from 'joi';
 
-const TITLE_MAX_LENGTH = 100;
+const TITLE_MAX_LENGTH = 50;
 const DESC_MAX_LENGTH = 1000;
 
-const itemSchema = new Schema(
+export interface IItem {
+  title: string;
+  description: string | null;
+}
+
+const itemSchema = new Schema<IItem>(
   {
     title: {
       type: String,
