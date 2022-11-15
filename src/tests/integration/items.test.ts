@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import request from 'supertest';
 import { app } from '../../app';
 import { Item, IItem } from '../../models/Item';
+import { Tag, ITag } from '../../models/Tag';
 
 describe('/api/v1/items', () => {
   beforeAll(async () => {
@@ -9,7 +10,9 @@ describe('/api/v1/items', () => {
   });
 
   afterEach(async () => {
-    await Item.deleteMany({}); // Clean up the database
+    // Clean up the database
+    await Item.deleteMany({});
+    await Tag.deleteMany({});
   });
 
   afterAll(() => {
@@ -263,6 +266,86 @@ describe('/api/v1/items', () => {
         const res = await act();
         expect(res.status).toBe(204);
         expect(res.body).toStrictEqual({});
+      });
+    });
+  });
+
+  describe('POST /:id/tags', () => {
+    let id: any;
+    let tag: any;
+
+    const act = async () =>
+      await request(app).post(`/api/v1/items/${id}/tags`).send(tag);
+
+    beforeEach(async () => {
+      // Populate the database
+      const item = new Item({
+        title: 'a',
+        description: 'a'
+      });
+      await item.save();
+      // Happy path
+      id = item._id;
+      tag = {
+        name: 'tag'
+      } as Partial<ITag>;
+    });
+
+    it('should return 404 if invalid id is passed', async () => {
+      id = 1;
+      const res = await act();
+      expect(res.status).toBe(404);
+    });
+
+    it('should return 404 if no item with the given id exists', async () => {
+      id = new mongoose.Types.ObjectId();
+      const res = await act();
+      expect(res.status).toBe(404);
+    });
+
+    it('should return 400 if tag name is longer than 20 characters', async () => {
+      tag = {
+        name: new Array(22).join('a')
+      };
+      const res = await act();
+      expect(res.status).toBe(400);
+    });
+
+    describe('If the id and tag are valid / SUCCESS', () => {
+      it('should save the tag with a reference to the item', async () => {
+        await act();
+        const tags = await Tag.find({ name: 'tag' });
+        expect(tags[0].items).toEqual([id]);
+      });
+
+      it('should update the item with a reference to the tag', async () => {
+        await act();
+        const item = await Item.findById(id);
+        const tag = await Tag.findOne({ name: 'tag' });
+        expect(item?.tags).toEqual([tag?._id]);
+      });
+
+      it('should ignore duplicate tags', async () => {
+        // Act twice
+        await act();
+        await act();
+        const tags = await Tag.find({ name: 'tag' });
+        const item = await Item.findById(id);
+        expect(tags.length).toBe(1);
+        expect(item?.tags.length).toBe(1);
+      });
+
+      it('should return the tagged item', async () => {
+        const res = await act();
+        expect(res.body).toHaveProperty('title', 'a');
+        expect(res.body).toHaveProperty('description', 'a');
+        expect(res.body.tags[0].name).toBe('tag');
+        expect(res.body.tags[0]._id).not.toBeNull();
+      });
+
+      it('should return 200 status code', async () => {
+        const res = await act();
+        expect(res.status).toBe(200);
       });
     });
   });
