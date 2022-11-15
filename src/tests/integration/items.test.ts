@@ -1,27 +1,23 @@
-import { Server, IncomingMessage, ServerResponse } from 'http';
 import mongoose from 'mongoose';
 import request from 'supertest';
-import { server } from '../../app';
+import { app } from '../../app';
 import { Item, IItem } from '../../models/Item';
 
 describe('/api/v1/items', () => {
-  let testServer: Server<typeof IncomingMessage, typeof ServerResponse>;
-
-  beforeEach(() => {
-    testServer = server;
+  beforeAll(async () => {
+    await mongoose.connect(process.env.MONGO_URI_TEST as string);
   });
 
   afterEach(async () => {
-    testServer.close();
     await Item.deleteMany({}); // Clean up the database
   });
 
   afterAll(() => {
-    mongoose.connection.close(); // Allows Jest to exit successfully
+    mongoose.connection.close();
   });
 
   describe('GET / SUCCESS', () => {
-    const act = async () => await request(testServer).get('/api/v1/items');
+    const act = async () => await request(app).get('/api/v1/items');
 
     beforeEach(async () => {
       // Populate the database
@@ -54,8 +50,7 @@ describe('/api/v1/items', () => {
     let id: any;
     let item: any;
 
-    const act = async () =>
-      await request(testServer).get(`/api/v1/items/${id}`);
+    const act = async () => await request(app).get(`/api/v1/items/${id}`);
 
     beforeEach(async () => {
       // Happy path
@@ -96,7 +91,7 @@ describe('/api/v1/items', () => {
     let newItem: any;
 
     const act = async () =>
-      await request(testServer).post('/api/v1/items').send(newItem);
+      await request(app).post('/api/v1/items').send(newItem);
 
     it('should return 400 if title is missing', async () => {
       newItem = {
@@ -165,7 +160,7 @@ describe('/api/v1/items', () => {
     let id: any;
 
     const act = async () =>
-      await request(testServer).patch(`/api/v1/items/${id}`).send(update);
+      await request(app).patch(`/api/v1/items/${id}`).send(update);
 
     beforeEach(async () => {
       // Happy path
@@ -233,7 +228,7 @@ describe('/api/v1/items', () => {
     let id: any;
 
     const act = async () =>
-      await request(testServer).delete(`/api/v1/items/${id}`).send();
+      await request(app).delete(`/api/v1/items/${id}`).send();
 
     beforeEach(async () => {
       // Happy path

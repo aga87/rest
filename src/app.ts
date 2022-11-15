@@ -5,14 +5,16 @@ import { logger } from './startup/logger';
 import { routes } from './startup/routes';
 
 dotenv.config();
-const app: Application = express();
+export const app: Application = express();
 
 routes(app);
 
-const { MONGO_URI, PORT } = process.env;
+const { MONGO_URI_DEV, PORT, NODE_ENV } = process.env;
 
-connectToMongoDB(MONGO_URI || '');
+if (NODE_ENV === 'development') {
+  connectToMongoDB(MONGO_URI_DEV as string);
+}
 
-export const server = app.listen(PORT, () =>
-  logger.info(`Listening on port ${PORT}...`)
-);
+if (NODE_ENV !== 'test') {
+  app.listen(PORT, () => logger.info(`Listening on port ${PORT}...`));
+}

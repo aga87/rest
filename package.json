@@ -8,8 +8,8 @@
     "dev": "nodemon src/app.ts",
     "lint": "eslint src/**/*.ts",
     "build": "tsc -p .",
-    "test": "jest --verbose",
-    "test:watch": "npm run test -- --watch --verbose"
+    "test": "NODE_ENV=test jest --verbose",
+    "test:watch": "NODE_ENV=test npm run test -- --watch --verbose"
   },
   "author": "",
   "license": "ISC",
