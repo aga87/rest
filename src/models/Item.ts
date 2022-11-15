@@ -7,7 +7,7 @@ const DESC_MAX_LENGTH = 1000;
 export interface IItem {
   title: string;
   description: string | null;
-  tags?: Types.ObjectId[];
+  tags: Types.ObjectId[];
 }
 
 const itemSchema = new Schema<IItem>(
@@ -25,12 +25,15 @@ const itemSchema = new Schema<IItem>(
       maxLength: DESC_MAX_LENGTH,
       trim: true
     },
-    tags: [
-      {
-        type: Schema.Types.ObjectId,
-        ref: 'Tag'
-      }
-    ]
+    tags: {
+      type: [
+        {
+          type: Schema.Types.ObjectId,
+          ref: 'Tag'
+        }
+      ],
+      required: true
+    }
   },
   { timestamps: true }
 );

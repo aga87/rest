@@ -3,9 +3,9 @@ import Joi from 'joi';
 
 const TAG_MAX_LENGTH = 20;
 
-interface ITag {
+export interface ITag {
   name: string;
-  items?: Types.ObjectId[];
+  items: Types.ObjectId[];
 }
 
 export const tagSchema = new Schema<ITag>({
@@ -16,12 +16,15 @@ export const tagSchema = new Schema<ITag>({
     maxLength: TAG_MAX_LENGTH,
     trim: true
   },
-  items: [
-    {
-      type: Schema.Types.ObjectId,
-      ref: 'Item'
-    }
-  ]
+  items: {
+    type: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: 'Item'
+      }
+    ],
+    required: true
+  }
 });
 
 export const Tag = model('Tag', tagSchema);

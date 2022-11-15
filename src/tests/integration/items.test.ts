@@ -25,7 +25,7 @@ describe('/api/v1/items', () => {
 
     beforeEach(async () => {
       // Populate the database
-      const items: IItem[] = [
+      const items: Partial<IItem>[] = [
         {
           title: 'a',
           description: 'a'
@@ -130,7 +130,7 @@ describe('/api/v1/items', () => {
         newItem = {
           title: 'a',
           description: 'a'
-        } as IItem;
+        } as Partial<IItem>;
       });
 
       it('should save the item', async () => {
@@ -178,7 +178,7 @@ describe('/api/v1/items', () => {
       update = {
         title: 'b',
         description: 'c'
-      } as IItem;
+      } as Partial<IItem>;
     });
 
     it('should return 400 if item title is longer than 50 characters', async () => {
