@@ -1,8 +1,11 @@
 import { Router } from 'express';
-import { getTags } from '../controllers/tags';
+import { deleteTag, getTags } from '../controllers/tags';
+import { validateObjectId } from '../middleware/validateObjectId';
 
 const router = Router();
 
 router.get('/', getTags);
+
+router.delete('/:id', validateObjectId, deleteTag);
 
 export { router as tags };
