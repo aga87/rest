@@ -115,3 +115,55 @@ export const tagItem: RequestHandler = async (req, res, next) => {
     next(err);
   }
 };
+
+export const untagItem: RequestHandler = async (req, res, next) => {
+  if (!mongoose.Types.ObjectId.isValid(req.params.tagId))
+    return res.status(404).send('Invalid tag ID.');
+
+  const session: ClientSession = await mongoose.startSession();
+  try {
+    session.startTransaction();
+    const { id, tagId } = req.params;
+    // Untag the Item
+    const item = await Item.findByIdAndUpdate(
+      id,
+      { $pull: { tags: tagId } },
+      {
+        new: true,
+        runValidators: true,
+        session
+      }
+    );
+
+    if (!item) {
+      return res.status(404).send('Item with the given ID was not found.');
+    }
+
+    // Update the Tag - remove the Item reference from items
+    const tag = await Tag.findByIdAndUpdate(
+      tagId,
+      { $pull: { items: id } },
+      {
+        new: true,
+        runValidators: true,
+        session
+      }
+    );
+
+    if (!tag) {
+      await session.abortTransaction();
+      return res.status(404).send('Tag with the given ID was not found.');
+    }
+
+    // If there is no items tagged with the Tag, remove the Tag altogether
+    if (tag.items.length === 0) {
+      await tag.remove();
+    }
+    await session.commitTransaction();
+    res.status(204).send();
+  } catch (err) {
+    await session.abortTransaction();
+    session.endSession();
+    next(err);
+  }
+};
