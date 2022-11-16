@@ -349,4 +349,78 @@ describe('/api/v1/items', () => {
       });
     });
   });
+
+  describe('DELETE /:id/tags/:tagId', () => {
+    let id: any;
+    let tagId: any;
+
+    const act = async () =>
+      await request(app).delete(`/api/v1/items/${id}/tags/${tagId}`).send();
+
+    beforeEach(async () => {
+      // Happy path
+      // Save an item
+      const item = new Item({
+        title: 'a',
+        description: 'a'
+      });
+      await item.save();
+      id = item._id;
+
+      // Tag the item
+      await request(app).post(`/api/v1/items/${id}/tags`).send({
+        name: 'tag'
+      });
+
+      const tag = await Tag.findOne({
+        name: 'tag'
+      });
+
+      tagId = tag?._id;
+    });
+
+    it('should return 404 if invalid id is passed', async () => {
+      id = 1;
+      const res = await act();
+      expect(res.status).toBe(404);
+    });
+
+    it('should return 404 if no item with the given id exists', async () => {
+      id = new mongoose.Types.ObjectId();
+      const res = await act();
+      expect(res.status).toBe(404);
+    });
+
+    it('should return 404 if invalid tagId is passed', async () => {
+      tagId = 1;
+      const res = await act();
+      expect(res.status).toBe(404);
+    });
+
+    it('should return 404 if no tag with the given tagId exists', async () => {
+      tagId = new mongoose.Types.ObjectId();
+      const res = await act();
+      expect(res.status).toBe(404);
+    });
+
+    describe('If the id and tagId are valid / SUCCESS', () => {
+      it('should untag the item', async () => {
+        await act();
+        const item = await Item.findById(id);
+        expect(item?.tags.length).toBe(0);
+      });
+
+      it('should return 204 status code and no response body', async () => {
+        const res = await act();
+        expect(res.status).toBe(204);
+        expect(res.body).toStrictEqual({});
+      });
+
+      it('should remove the tag if no other items use the tag', async () => {
+        await act();
+        const tag = await Tag.findById(tagId);
+        expect(tag).toBe(null);
+      });
+    });
+  });
 });
