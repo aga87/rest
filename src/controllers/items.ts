@@ -2,7 +2,7 @@ import mongoose, { ClientSession } from 'mongoose';
 import { RequestHandler } from 'express';
 import { Item, createItemSchema, updateItemSchema } from '../models/Item';
 import { Tag, createTagSchema } from '../models/Tag';
-import { validateSchema } from '../services/joi';
+import { validateSchema } from '../utils';
 
 export const getItems: RequestHandler = async (_req, res, next) => {
   try {
