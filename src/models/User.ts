@@ -1,22 +1,22 @@
-import mongoose from 'mongoose';
+import { Schema, model } from 'mongoose';
 import Joi from 'joi';
+import { joiPasswordExtendCore } from 'joi-password';
 
-const NAME_MIN_LENGTH = 2;
 const NAME_MAX_LENGTH = 30;
 const PASSWORD_MIN_LENGTH = 5;
 const PASSWORD_MAX_LENGTH = 256;
 
-interface IUser {
+export interface IUser {
   name: string;
   email: string;
   password: string;
   isVerified: boolean;
 }
-const userSchema = new mongoose.Schema<IUser>({
+
+const userSchema = new Schema<IUser>({
   name: {
     type: String,
     required: true,
-    minlength: NAME_MIN_LENGTH,
     maxlength: NAME_MAX_LENGTH
   },
   email: {
@@ -37,13 +37,23 @@ const userSchema = new mongoose.Schema<IUser>({
   }
 });
 
-export const User = mongoose.model('User', userSchema);
+export const User = model('User', userSchema);
+
+const joiPassword = Joi.extend(joiPasswordExtendCore);
+
+export const passwordValidator = joiPassword
+  .string()
+  .min(PASSWORD_MIN_LENGTH)
+  .max(PASSWORD_MAX_LENGTH)
+  .minOfSpecialCharacters(1)
+  .minOfLowercase(1)
+  .minOfUppercase(1)
+  .minOfNumeric(1)
+  .noWhiteSpaces()
+  .required();
 
 export const createUserSchema = Joi.object({
-  name: Joi.string().min(NAME_MIN_LENGTH).max(NAME_MAX_LENGTH).required(),
-  email: Joi.string().required().email(),
-  password: Joi.string()
-    .min(PASSWORD_MIN_LENGTH)
-    .max(PASSWORD_MAX_LENGTH)
-    .required()
+  name: Joi.string().max(NAME_MAX_LENGTH).required(),
+  email: Joi.string().email().required(),
+  password: passwordValidator
 });
