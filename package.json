@@ -37,6 +37,7 @@
     "dotenv": "^16.0.3",
     "express": "^4.18.2",
     "joi": "^17.6.4",
+    "joi-password": "^4.0.0",
     "mongoose": "^6.6.5",
     "morgan": "^1.10.0",
     "nodemailer": "^6.8.0",
