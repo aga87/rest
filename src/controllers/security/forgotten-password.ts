@@ -31,11 +31,12 @@ export const generatePasswordResetToken: RequestHandler = async (
 
     if (user?.isVerified) {
       // Remove old token if it exists
-      await Token.findOneAndDelete({ userId: user._id });
+      await Token.findOneAndDelete({ userId: user._id, type: 'reset' });
 
       // Generate and save new token
       const token = new Token({
-        userId: user._id
+        userId: user._id,
+        type: 'reset'
       });
       await token.save();
 

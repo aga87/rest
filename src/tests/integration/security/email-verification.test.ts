@@ -38,7 +38,8 @@ describe('/api/v1/security/email-verification', () => {
       await user.save();
 
       const verificationToken = new Token({
-        userId: user._id
+        userId: user._id,
+        type: 'verification'
       });
 
       await verificationToken.save();
@@ -77,7 +78,10 @@ describe('/api/v1/security/email-verification', () => {
 
       it('should remove the token from the DB', async () => {
         await act();
-        const tokenInDB = await Token.findOne({ token: reqBody.token });
+        const tokenInDB = await Token.findOne({
+          token: reqBody.token,
+          type: 'verification'
+        });
         expect(tokenInDB).toBeNull();
       });
 
@@ -108,7 +112,8 @@ describe('/api/v1/security/email-verification', () => {
       await user.save();
 
       const verificationToken = new Token({
-        userId: user._id
+        userId: user._id,
+        type: 'verification'
       });
 
       await verificationToken.save();
@@ -130,13 +135,13 @@ describe('/api/v1/security/email-verification', () => {
     describe('if email is valid / SUCCESS', () => {
       it('should remove the original from the DB', async () => {
         await act();
-        const oldToken = await Token.findOne({ token });
+        const oldToken = await Token.findOne({ token, type: 'verification' });
         expect(oldToken).toBeNull();
       });
 
       it('should generate and save a new token for that user in the DB', async () => {
         await act();
-        const newToken = await Token.findOne({ userId });
+        const newToken = await Token.findOne({ userId, type: 'verification' });
         expect(newToken).not.toBeNull();
       });
 

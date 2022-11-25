@@ -15,7 +15,10 @@ export const verifyUser: RequestHandler = async (req, res, next) => {
   if (error) return res.status(400).send(error);
 
   try {
-    const token = await Token.findOne({ token: req.body.token });
+    const token = await Token.findOne({
+      token: req.body.token,
+      type: 'verification'
+    });
 
     if (!token)
       return res.status(401).send({
@@ -90,11 +93,12 @@ export const renewVerificationToken: RequestHandler = async (
 
     if (user && !user.isVerified) {
       // Delete the old token
-      await Token.findOneAndDelete({ userId: user._id });
+      await Token.findOneAndDelete({ userId: user._id, type: 'verification' });
 
       // Generate and save new token
       const newToken = new Token({
-        userId: user._id
+        userId: user._id,
+        type: 'verification'
       });
       await newToken.save();
 

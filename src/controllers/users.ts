@@ -45,7 +45,8 @@ export const register: RequestHandler = async (req, res, next) => {
 
       // Generate and save verification token
       const token = new Token({
-        userId: user._id
+        userId: user._id,
+        type: 'verification'
       });
       await token.save();
 

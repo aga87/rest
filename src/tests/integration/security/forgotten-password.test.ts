@@ -60,7 +60,7 @@ describe('/api/v1/security/forgotten-password', () => {
     describe('if email is valid / SUCCESS', () => {
       it('should not generate a password reset token if user is not verified', async () => {
         await act();
-        const token = await Token.findOne({ userId });
+        const token = await Token.findOne({ userId, type: 'reset' });
         expect(token).toBeNull();
       });
 
@@ -73,7 +73,7 @@ describe('/api/v1/security/forgotten-password', () => {
           { runValidators: true, new: true }
         );
         await act();
-        const token = await Token.findOne({ userId });
+        const token = await Token.findOne({ userId, type: 'reset' });
         expect(user?.isVerified).toBeTruthy();
         expect(token).not.toBeNull();
       });

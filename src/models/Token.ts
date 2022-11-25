@@ -4,6 +4,7 @@ import { IUser } from './User';
 
 interface IToken {
   token: string;
+  type: 'verification' | 'reset';
   userId: Types.ObjectId | IUser;
   createdAt: Date;
 }
@@ -14,6 +15,11 @@ const tokenSchema = new Schema<IToken>({
     required: true,
     default: () => crypto.randomBytes(16).toString('hex'),
     unique: true
+  },
+  type: {
+    type: String,
+    enum: ['verification', 'reset'],
+    required: true
   },
   userId: {
     type: Types.ObjectId,
