@@ -9,8 +9,25 @@ export const app: Application = express();
 
 routes(app);
 
-const { MONGO_URI_DEV, PORT, NODE_ENV } = process.env;
+const {
+  MONGO_URI_DEV,
+  PORT,
+  NODE_ENV,
+  ACCESS_TOKEN_SECRET,
+  REFRESH_TOKEN_SECRET
+} = process.env;
 
+if (!ACCESS_TOKEN_SECRET) {
+  logger.error('FATAL ERROR: ACCESS_TOKEN_SECRET is not defined.');
+  process.exit(1);
+}
+
+if (!REFRESH_TOKEN_SECRET) {
+  logger.error('FATAL ERROR: REFRESH_TOKEN_SECRET is not defined.');
+  process.exit(1);
+}
+
+// FIXME: move to startup?
 if (NODE_ENV === 'development') {
   connectToMongoDB(MONGO_URI_DEV as string);
 }

@@ -1,6 +1,7 @@
 import { Schema, model } from 'mongoose';
 import Joi from 'joi';
 import { joiPasswordExtendCore } from 'joi-password';
+import jwt from 'jsonwebtoken';
 
 const NAME_MAX_LENGTH = 30;
 const PASSWORD_MIN_LENGTH = 5;
@@ -11,6 +12,8 @@ export interface IUser {
   email: string;
   password: string;
   isVerified: boolean;
+  generateAccessToken: () => string;
+  generateRefreshToken: () => string;
 }
 
 const userSchema = new Schema<IUser>({
@@ -37,6 +40,29 @@ const userSchema = new Schema<IUser>({
   }
 });
 
+userSchema.methods.generateAccessToken = function () {
+  const token = jwt.sign(
+    {
+      _id: this._id
+    },
+    `${process.env.ACCESS_TOKEN_SECRET}`,
+    { expiresIn: 15 * 60 } // 15mins
+  );
+  return token;
+};
+
+userSchema.methods.generateRefreshToken = function () {
+  const token = jwt.sign(
+    {
+      _id: this._id
+    },
+    `${process.env.REFRESH_TOKEN_SECRET}`,
+
+    { expiresIn: '30d' }
+  );
+  return token;
+};
+
 export const User = model('User', userSchema);
 
 const joiPassword = Joi.extend(joiPasswordExtendCore);
@@ -52,8 +78,15 @@ export const passwordValidator = joiPassword
   .noWhiteSpaces()
   .required();
 
+const emailValidator = Joi.string().email().required();
+
 export const createUserSchema = Joi.object({
   name: Joi.string().max(NAME_MAX_LENGTH).required(),
-  email: Joi.string().email().required(),
+  email: emailValidator,
   password: passwordValidator
+});
+
+export const loginSchema = Joi.object({
+  email: emailValidator,
+  password: Joi.string().required()
 });
