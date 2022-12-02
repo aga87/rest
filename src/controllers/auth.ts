@@ -85,3 +85,38 @@ export const login: RequestHandler = async (req, res, next) => {
     next(err);
   }
 };
+
+export const refreshAccessToken: RequestHandler = async (req, res, next) => {
+  if (!req.body.refreshToken)
+    return res.status(400).send('Refresh token is required.');
+
+  try {
+    const token = await Token.findOne({
+      token: req.body.refreshToken,
+      type: 'refresh'
+    });
+
+    if (!token)
+      return res.status(401).send({
+        msg: 'Invalid or expired token.',
+        _links: getHATEOAS(req.originalUrl, [
+          {
+            href: `${process.env.BASE_URL}/api/v1/auth`,
+            rel: 'login'
+          }
+        ])
+      });
+
+    const user = await User.findById(token.userId);
+
+    if (!user)
+      return res
+        .status(404)
+        .send('The token is valid but user does not exists.');
+
+    const accessToken = user.generateAccessToken();
+    return res.status(200).send({ accessToken });
+  } catch (err) {
+    next(err);
+  }
+};
