@@ -1,12 +1,13 @@
 import { Schema, model, Types } from 'mongoose';
 import crypto from 'crypto';
 import { IUser } from './User';
+import { calculateFutureDateTime } from '../utils';
 
 interface IToken {
   token: string;
   type: 'verification' | 'reset';
   userId: Types.ObjectId | IUser;
-  createdAt: Date;
+  expireAt: Date;
 }
 
 const tokenSchema = new Schema<IToken>({
@@ -18,7 +19,7 @@ const tokenSchema = new Schema<IToken>({
   },
   type: {
     type: String,
-    enum: ['verification', 'reset'],
+    enum: ['verification', 'reset', 'refresh'],
     required: true
   },
   userId: {
@@ -26,10 +27,14 @@ const tokenSchema = new Schema<IToken>({
     ref: 'User',
     required: true
   },
-  createdAt: {
+  expireAt: {
     type: Date,
-    expires: 1800, // Delete the document after 30 mins
-    default: Date.now
+    expires: 1, // Must be a positive value. A document will expire when the number of seconds in the expireAfterSeconds field has passed since the time specified in its TTL indexed field;
+    default: function () {
+      return this.type === 'refresh'
+        ? calculateFutureDateTime({ months: 1 })
+        : calculateFutureDateTime({ minutes: 30 });
+    }
   }
 });
 
