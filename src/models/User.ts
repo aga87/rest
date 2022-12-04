@@ -43,7 +43,7 @@ const userSchema = new Schema<IUser>({
 userSchema.methods.generateAccessToken = function () {
   const token = jwt.sign(
     {
-      _id: this._id
+      userId: this._id
     },
     `${process.env.ACCESS_TOKEN_SECRET}`,
     { expiresIn: 15 * 60 } // 15mins
@@ -54,7 +54,7 @@ userSchema.methods.generateAccessToken = function () {
 userSchema.methods.generateRefreshToken = function () {
   const token = jwt.sign(
     {
-      _id: this._id
+      userId: this._id
     },
     `${process.env.REFRESH_TOKEN_SECRET}`,
 
