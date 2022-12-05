@@ -1,8 +1,16 @@
 import mongoose, { Types } from 'mongoose';
 import request from 'supertest';
 import { app } from '../../app';
+import { authMiddleware } from '../../middleware/auth';
 import { Item } from '../../models/Item';
 import { Tag, ITag } from '../../models/Tag';
+
+// Mock auth middleware to bypass authorization (tested separately) (and only test if the middleware is invoked on protected routes)
+jest.mock('../../middleware/auth', () => {
+  return {
+    authMiddleware: jest.fn((req, res, next) => next())
+  };
+});
 
 describe('/api/v1/tags', () => {
   beforeAll(async () => {
@@ -10,8 +18,10 @@ describe('/api/v1/tags', () => {
   });
 
   afterEach(async () => {
+    jest.clearAllMocks();
     // Clean up the database
     await Tag.deleteMany({});
+    await Item.deleteMany({});
   });
 
   afterAll(async () => {
@@ -32,6 +42,13 @@ describe('/api/v1/tags', () => {
         }
       ];
       await Tag.collection.insertMany(tags);
+    });
+
+    describe('Auth', () => {
+      it('should require user-based authorization', async () => {
+        await act();
+        expect(authMiddleware).toHaveBeenCalledTimes(1);
+      });
     });
 
     it('should return all tags', async () => {
@@ -73,6 +90,13 @@ describe('/api/v1/tags', () => {
 
       itemId = item._id;
       item2Id = item2._id;
+    });
+
+    describe('Auth', () => {
+      it('should require user-based authorization', async () => {
+        await act();
+        expect(authMiddleware).toHaveBeenCalledTimes(1);
+      });
     });
 
     it('should return 404 if invalid id is passed', async () => {
