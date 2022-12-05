@@ -1,9 +1,9 @@
 import mongoose, { Types } from 'mongoose';
 import request from 'supertest';
-import { app } from '../../app';
-import { authMiddleware } from '../../middleware/auth';
-import { Item } from '../../models/Item';
-import { Tag, ITag } from '../../models/Tag';
+import { app } from '../../../app';
+import { authMiddleware } from '../../../middleware/auth';
+import { Item } from '../../../models/Item';
+import { Tag, ITag } from '../../../models/Tag';
 
 // Mock auth middleware to bypass authorization (tested separately) (and only test if the middleware is invoked on protected routes)
 jest.mock('../../middleware/auth', () => {

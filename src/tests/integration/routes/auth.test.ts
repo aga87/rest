@@ -1,9 +1,9 @@
 import bcrypt from 'bcrypt';
 import mongoose from 'mongoose';
 import request from 'supertest';
-import { app } from '../../app';
-import { User } from '../../models/User';
-import { Token } from '../../models/Token';
+import { app } from '../../../app';
+import { User } from '../../../models/User';
+import { Token } from '../../../models/Token';
 
 describe('/api/v1/auth', () => {
   beforeAll(async () => {
