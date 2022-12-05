@@ -1,8 +1,16 @@
 import mongoose from 'mongoose';
 import request from 'supertest';
 import { app } from '../../app';
+import { authMiddleware } from '../../middleware/auth';
 import { Item, IItem } from '../../models/Item';
 import { Tag, ITag } from '../../models/Tag';
+
+// Mock auth middleware to bypass authorization (tested separately) (and only test if the middleware is invoked on protected routes)
+jest.mock('../../middleware/auth', () => {
+  return {
+    authMiddleware: jest.fn((req, res, next) => next())
+  };
+});
 
 describe('/api/v1/items', () => {
   beforeAll(async () => {
@@ -10,6 +18,8 @@ describe('/api/v1/items', () => {
   });
 
   afterEach(async () => {
+    // Clear mocks
+    jest.clearAllMocks();
     // Clean up the database
     await Item.deleteMany({});
     await Tag.deleteMany({});
@@ -35,6 +45,13 @@ describe('/api/v1/items', () => {
         }
       ];
       await Item.collection.insertMany(items);
+    });
+
+    describe('Auth', () => {
+      it('should require user-based authorization', async () => {
+        await act();
+        expect(authMiddleware).toHaveBeenCalledTimes(1);
+      });
     });
 
     it('should return all items', async () => {
@@ -63,6 +80,13 @@ describe('/api/v1/items', () => {
       });
       await item.save();
       id = item._id;
+    });
+
+    describe('Auth', () => {
+      it('should require user-based authorization', async () => {
+        await act();
+        expect(authMiddleware).toHaveBeenCalledTimes(1);
+      });
     });
 
     it('should return 404 if invalid id is passed', async () => {
@@ -95,6 +119,13 @@ describe('/api/v1/items', () => {
 
     const act = async () =>
       await request(app).post('/api/v1/items').send(newItem);
+
+    describe('Auth', () => {
+      it('should require user-based authorization', async () => {
+        await act();
+        expect(authMiddleware).toHaveBeenCalledTimes(1);
+      });
+    });
 
     it('should return 400 if title is missing', async () => {
       newItem = {
@@ -179,6 +210,13 @@ describe('/api/v1/items', () => {
       } as Partial<IItem>;
     });
 
+    describe('Auth', () => {
+      it('should require user-based authorization', async () => {
+        await act();
+        expect(authMiddleware).toHaveBeenCalledTimes(1);
+      });
+    });
+
     it('should return 400 if item title is longer than 50 characters', async () => {
       update = {
         title: new Array(52).join('a')
@@ -243,6 +281,13 @@ describe('/api/v1/items', () => {
       id = item._id;
     });
 
+    describe('Auth', () => {
+      it('should require user-based authorization', async () => {
+        await act();
+        expect(authMiddleware).toHaveBeenCalledTimes(1);
+      });
+    });
+
     it('should return 404 if invalid id is passed', async () => {
       id = 1;
       const res = await act();
@@ -289,6 +334,13 @@ describe('/api/v1/items', () => {
       tag = {
         name: 'tag'
       } as Partial<ITag>;
+    });
+
+    describe('Auth', () => {
+      it('should require user-based authorization', async () => {
+        await act();
+        expect(authMiddleware).toHaveBeenCalledTimes(1);
+      });
     });
 
     it('should return 404 if invalid id is passed', async () => {
@@ -359,24 +411,28 @@ describe('/api/v1/items', () => {
 
     beforeEach(async () => {
       // Happy path
-      // Save an item
-      const item = new Item({
+      id = new mongoose.Types.ObjectId().toHexString();
+      tagId = new mongoose.Types.ObjectId().toHexString();
+
+      await new Item({
+        _id: id,
         title: 'a',
-        description: 'a'
-      });
-      await item.save();
-      id = item._id;
+        description: 'a',
+        tags: [tagId]
+      }).save();
 
-      // Tag the item
-      await request(app).post(`/api/v1/items/${id}/tags`).send({
-        name: 'tag'
-      });
+      await new Tag({
+        _id: tagId,
+        name: 'tag',
+        items: [id]
+      }).save();
+    });
 
-      const tag = await Tag.findOne({
-        name: 'tag'
+    describe('Auth', () => {
+      it('should require user-based authorization', async () => {
+        await act();
+        expect(authMiddleware).toHaveBeenCalledTimes(1);
       });
-
-      tagId = tag?._id;
     });
 
     it('should return 404 if invalid id is passed', async () => {
