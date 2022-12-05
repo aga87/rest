@@ -30,13 +30,11 @@ describe('/api/v1/security/forgotten-password', () => {
 
     beforeEach(async () => {
       // Happy path
-      const user = new User({
+      const user = await new User({
         name: 'a',
         email: 'a@a.com',
         password: '123aA%'
-      });
-
-      await user.save();
+      }).save();
 
       userId = user._id;
 
@@ -52,7 +50,7 @@ describe('/api/v1/security/forgotten-password', () => {
     });
 
     it('should return 400 if email is invalid', async () => {
-      reqBody = { email: 'a' };
+      reqBody.email = 'a';
       const res = await act();
       expect(res.status).toBe(400);
     });
@@ -107,22 +105,19 @@ describe('/api/v1/security/forgotten-password', () => {
 
     beforeEach(async () => {
       // Happy path
-      const user = new User({
+
+      const user = await new User({
         name: 'a',
         email: 'a@a.com',
         password: '123aA%'
-      });
-
-      await user.save();
+      }).save();
 
       userId = user._id;
 
-      const resetToken = new Token({
+      const resetToken = await new Token({
         userId,
         type: 'reset'
-      });
-
-      await resetToken.save();
+      }).save();
 
       token = resetToken.token;
       newPassword = '987%aA';
@@ -134,27 +129,25 @@ describe('/api/v1/security/forgotten-password', () => {
     });
 
     it('should return 400 if token is missing', async () => {
-      reqBody = { newPassword };
+      delete reqBody.token;
       const res = await act();
       expect(res.status).toBe(400);
     });
 
     it('should return 400 if new password is missing', async () => {
-      reqBody = { token };
+      delete reqBody.newPassword;
       const res = await act();
       expect(res.status).toBe(400);
     });
 
     it('should return 400 if new password is too weak', async () => {
-      newPassword = 'a';
-      reqBody = { newPassword, token };
+      reqBody.newPassword = 'a';
       const res = await act();
       expect(res.status).toBe(400);
     });
 
-    it('should return 401 if token is invalid or expired', async () => {
-      token = 'a';
-      reqBody = { token, newPassword };
+    it('should return 401 if token is invalid', async () => {
+      reqBody.token = 'a';
       const res = await act();
       expect(res.status).toBe(401);
     });

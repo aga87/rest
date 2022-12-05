@@ -54,8 +54,7 @@ describe('/api/v1/users', () => {
     });
 
     it('should return 400 if email is invalid', async () => {
-      email = 'a';
-      newUser = { name, email, password };
+      newUser.email = 'a';
       const res = await act();
       expect(res.status).toBe(400);
     });
@@ -67,8 +66,7 @@ describe('/api/v1/users', () => {
     });
 
     it('should return 400 if password is too weak', async () => {
-      password = '12345';
-      newUser = { name, email, password };
+      newUser.password = '12345';
       const res = await act();
       expect(res.status).toBe(400);
     });

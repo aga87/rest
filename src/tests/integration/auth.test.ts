@@ -1,7 +1,8 @@
+import bcrypt from 'bcrypt';
 import mongoose from 'mongoose';
 import request from 'supertest';
 import { app } from '../../app';
-import { User, IUser } from '../../models/User';
+import { User } from '../../models/User';
 import { Token } from '../../models/Token';
 
 describe('/api/v1/auth', () => {
@@ -29,19 +30,19 @@ describe('/api/v1/auth', () => {
 
     beforeEach(async () => {
       // Happy path
-      // Register a user (saving directly to the DB would not hash the password)
-      const user: Pick<IUser, 'name' | 'email' | 'password'> = {
+      email = 'a@a.com';
+      password = '123aA%';
+
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(password, salt);
+
+      await new User({
         name: 'a',
-        email: 'a@a.com',
-        password: '123aA%'
-      };
-      await request(app).post('/api/v1/users').send(user);
+        email,
+        password: hashedPassword,
+        isVerified: true
+      }).save();
 
-      // Verify user
-      await User.findOneAndUpdate({ email: user.email }, { isVerified: true });
-
-      email = user.email;
-      password = user.password;
       reqBody = { email, password };
     });
 

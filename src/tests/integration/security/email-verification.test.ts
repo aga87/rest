@@ -29,20 +29,16 @@ describe('/api/v1/security/email-verification', () => {
 
     beforeEach(async () => {
       // Happy path
-      const user = new User({
+      const user = await new User({
         name: 'a',
         email: 'a@a.com',
         password: '123aA%'
-      });
+      }).save();
 
-      await user.save();
-
-      const verificationToken = new Token({
+      const verificationToken = await new Token({
         userId: user._id,
         type: 'verification'
-      });
-
-      await verificationToken.save();
+      }).save();
 
       reqBody = {
         token: verificationToken.token
@@ -50,15 +46,13 @@ describe('/api/v1/security/email-verification', () => {
     });
 
     it('should return 400 if token is missing', async () => {
-      reqBody = {};
+      delete reqBody.token;
       const res = await act();
       expect(res.status).toBe(400);
     });
 
     it('should return 401 if token is invalid or expired', async () => {
-      reqBody = {
-        token: 'a'
-      };
+      reqBody.token = 'a';
       const res = await act();
       expect(res.status).toBe(401);
     });
@@ -103,21 +97,18 @@ describe('/api/v1/security/email-verification', () => {
         .send(reqBody);
 
     beforeEach(async () => {
-      const user = new User({
+      const user = await new User({
         name: 'a',
         email: 'a@a.com',
         password: '123aA%'
-      });
+      }).save();
 
-      await user.save();
-
-      const verificationToken = new Token({
+      const verificationToken = await new Token({
         userId: user._id,
         type: 'verification'
-      });
+      }).save();
 
-      await verificationToken.save();
-
+      // Happy path
       reqBody = {
         email: user.email
       };
@@ -127,7 +118,7 @@ describe('/api/v1/security/email-verification', () => {
     });
 
     it('should return 400 if email is missing', async () => {
-      reqBody = {};
+      delete reqBody.email;
       const res = await act();
       expect(res.status).toBe(400);
     });

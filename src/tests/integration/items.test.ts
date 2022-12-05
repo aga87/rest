@@ -74,11 +74,11 @@ describe('/api/v1/items', () => {
 
     beforeEach(async () => {
       // Happy path
-      item = new Item({
+      item = await new Item({
         title: 'a',
         description: 'a'
-      });
-      await item.save();
+      }).save();
+
       id = item._id;
     });
 
@@ -120,6 +120,14 @@ describe('/api/v1/items', () => {
     const act = async () =>
       await request(app).post('/api/v1/items').send(newItem);
 
+    beforeEach(() => {
+      // Happy path
+      newItem = {
+        title: 'a',
+        description: 'a'
+      } as Partial<IItem>;
+    });
+
     describe('Auth', () => {
       it('should require user-based authorization', async () => {
         await act();
@@ -128,40 +136,24 @@ describe('/api/v1/items', () => {
     });
 
     it('should return 400 if title is missing', async () => {
-      newItem = {
-        description: 'a'
-      };
+      delete newItem.title;
       const res = await act();
       expect(res.status).toBe(400);
     });
 
     it('should return 400 if item title is longer than 50 characters', async () => {
-      newItem = {
-        title: new Array(52).join('a'),
-        description: 'a'
-      };
+      newItem.title = new Array(52).join('a');
       const res = await act();
       expect(res.status).toBe(400);
     });
 
     it('should return 400 if item description is longer than 1000 characters', async () => {
-      newItem = {
-        title: 'a',
-        description: new Array(1002).join('a')
-      };
+      newItem.description = new Array(1002).join('a');
       const res = await act();
       expect(res.status).toBe(400);
     });
 
     describe('If the item is valid / SUCCESS', () => {
-      beforeEach(() => {
-        // Happy path
-        newItem = {
-          title: 'a',
-          description: 'a'
-        } as Partial<IItem>;
-      });
-
       it('should save the item', async () => {
         await act();
         const item = await Item.find({ title: 'a' });
@@ -198,12 +190,13 @@ describe('/api/v1/items', () => {
 
     beforeEach(async () => {
       // Happy path
-      const item = new Item({
+      const item = await new Item({
         title: 'a',
         description: 'a'
-      });
-      await item.save();
+      }).save();
+
       id = item._id;
+
       update = {
         title: 'b',
         description: 'c'
@@ -218,17 +211,13 @@ describe('/api/v1/items', () => {
     });
 
     it('should return 400 if item title is longer than 50 characters', async () => {
-      update = {
-        title: new Array(52).join('a')
-      };
+      update.title = new Array(52).join('a');
       const res = await act();
       expect(res.status).toBe(400);
     });
 
     it('should return 400 if item description is longer than 1000 characters', async () => {
-      update = {
-        description: new Array(1002).join('a')
-      };
+      update.description = new Array(1002).join('a');
       const res = await act();
       expect(res.status).toBe(400);
     });
@@ -273,11 +262,11 @@ describe('/api/v1/items', () => {
 
     beforeEach(async () => {
       // Happy path
-      const item = new Item({
+      const item = await new Item({
         title: 'a',
         description: 'a'
-      });
-      await item.save();
+      }).save();
+
       id = item._id;
     });
 
@@ -323,13 +312,12 @@ describe('/api/v1/items', () => {
       await request(app).post(`/api/v1/items/${id}/tags`).send(tag);
 
     beforeEach(async () => {
-      // Populate the database
-      const item = new Item({
+      const item = await new Item({
         title: 'a',
         description: 'a'
-      });
-      await item.save();
-      // Happy path
+      }).save();
+
+      //  Happy path
       id = item._id;
       tag = {
         name: 'tag'
@@ -356,9 +344,7 @@ describe('/api/v1/items', () => {
     });
 
     it('should return 400 if tag name is longer than 20 characters', async () => {
-      tag = {
-        name: new Array(22).join('a')
-      };
+      tag.name = new Array(22).join('a');
       const res = await act();
       expect(res.status).toBe(400);
     });

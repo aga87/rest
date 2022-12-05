@@ -71,22 +71,18 @@ describe('/api/v1/tags', () => {
 
     beforeEach(async () => {
       // Populate database + define happy path
-      const tag = new Tag({ name: 'tag' });
-      await tag.save();
+      const tag = await new Tag({ name: 'tag' }).save();
       id = tag._id;
 
-      const item = new Item({
+      const item = await new Item({
         title: 'a',
         tags: [id]
-      });
+      }).save();
 
-      const item2 = new Item({
+      const item2 = await new Item({
         title: 'a',
         tags: [id]
-      });
-
-      await item.save();
-      await item2.save();
+      }).save();
 
       itemId = item._id;
       item2Id = item2._id;
