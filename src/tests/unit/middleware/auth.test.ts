@@ -4,7 +4,8 @@ import { authMiddleware } from '../../../middleware/auth';
 import { User } from '../../../models/User';
 
 describe('auth middleware', () => {
-  it('should populate req.user with the payload of a valid JWT', () => {
+  describe('If JWT is valid', () => {
+    // Synchronous setup - no need for beforeAll
     const user = {
       _id: new mongoose.Types.ObjectId().toHexString()
     };
@@ -21,6 +22,12 @@ describe('auth middleware', () => {
 
     authMiddleware(req, res, next);
 
-    expect(req.user).toMatchObject({ userId: user._id });
+    it('should populate req.user with the payload of a valid JWT', () => {
+      expect(req.user).toMatchObject({ userId: user._id });
+    });
+
+    it('should pass control to the next middleware/ handler', () => {
+      expect(next).toHaveBeenCalledTimes(1); // ??
+    });
   });
 });
