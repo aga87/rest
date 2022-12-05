@@ -14,7 +14,7 @@ declare global {
 }
 
 export const authMiddleware: RequestHandler = (req, res, next) => {
-  const token = req.header('Authorization')?.split(' ')[1].trim();
+  const token = req.header('Authorization')?.split(' ')[1]?.trim();
   if (!token) return res.status(401).send('Access token is missing.');
   try {
     const decoded = jwt.verify(
