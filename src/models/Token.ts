@@ -19,7 +19,7 @@ const tokenSchema = new Schema<IToken>({
   },
   type: {
     type: String,
-    enum: ['verification', 'reset', 'refresh'],
+    enum: ['verification', 'reset', 'refresh', 'refresh-admin'],
     required: true
   },
   userId: {
@@ -31,9 +31,12 @@ const tokenSchema = new Schema<IToken>({
     type: Date,
     expires: 1, // Must be a positive value. A document will expire when the number of seconds in the expireAfterSeconds field has passed since the time specified in its TTL indexed field;
     default: function () {
-      return this.type === 'refresh'
-        ? calculateFutureDateTime({ months: 1 })
-        : calculateFutureDateTime({ minutes: 30 });
+      if (this.type === 'verification' || this.type === 'reset')
+        return calculateFutureDateTime({ minutes: 30 });
+      if (this.type === 'refresh')
+        return calculateFutureDateTime({ months: 1 });
+      // 'refresh-admin'
+      return calculateFutureDateTime({ hours: 24 });
     }
   }
 });

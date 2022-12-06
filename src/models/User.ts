@@ -12,6 +12,7 @@ export interface IUser {
   email: string;
   password: string;
   isVerified: boolean;
+  isAdmin: boolean;
   generateAccessToken: () => string;
   generateRefreshToken: () => string;
 }
@@ -37,13 +38,19 @@ const userSchema = new Schema<IUser>({
     type: Boolean,
     required: true,
     default: false
+  },
+  isAdmin: {
+    type: Boolean,
+    required: true,
+    default: false
   }
 });
 
 userSchema.methods.generateAccessToken = function () {
   const token = jwt.sign(
     {
-      userId: this._id
+      userId: this._id,
+      isAdmin: this.isAdmin
     },
     `${process.env.ACCESS_TOKEN_SECRET}`,
     { expiresIn: 15 * 60 } // 15mins
@@ -58,7 +65,7 @@ userSchema.methods.generateRefreshToken = function () {
     },
     `${process.env.REFRESH_TOKEN_SECRET}`,
 
-    { expiresIn: '30d' }
+    { expiresIn: this.isAdmin ? '24h' : '30d' }
   );
   return token;
 };

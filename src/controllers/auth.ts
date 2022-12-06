@@ -51,7 +51,7 @@ export const login: RequestHandler = async (req, res, next) => {
     await new Token({
       userId: user._id,
       token: refreshToken,
-      type: 'refresh'
+      type: user.isAdmin ? 'refresh-admin' : 'refresh'
     }).save();
 
     res.send({
