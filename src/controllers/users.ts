@@ -76,6 +76,15 @@ export const register: RequestHandler = async (req, res, next) => {
   }
 };
 
+export const getUsers: RequestHandler = async (req, res, next) => {
+  try {
+    const users = await User.find().select('-password');
+    res.send(users);
+  } catch (err) {
+    next(err);
+  }
+};
+
 export const getMe: RequestHandler = async (req, res, next) => {
   try {
     const user = await User.findById(req.user.userId).select(
