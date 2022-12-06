@@ -75,3 +75,14 @@ export const register: RequestHandler = async (req, res, next) => {
     next(err);
   }
 };
+
+export const getMe: RequestHandler = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user.userId).select(
+      '-password -__v -_id'
+    );
+    res.send(user);
+  } catch (err) {
+    next(err);
+  }
+};
