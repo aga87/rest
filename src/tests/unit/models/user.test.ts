@@ -6,9 +6,10 @@ describe('User methods', () => {
   describe('user.generateAuthToken', () => {
     it('should return a valid JWT', () => {
       const payload = {
-        userId: new mongoose.Types.ObjectId().toHexString()
+        userId: new mongoose.Types.ObjectId().toHexString(),
+        isAdmin: true
       };
-      const user = new User({ _id: payload.userId });
+      const user = new User({ _id: payload.userId, isAdmin: payload.isAdmin });
       const token = user.generateAccessToken();
       const decoded = jwt.verify(token, `${process.env.ACCESS_TOKEN_SECRET}`);
 
