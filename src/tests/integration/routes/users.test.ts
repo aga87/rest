@@ -42,13 +42,13 @@ describe('/api/v1/users', () => {
     });
 
     it('should return 400 if name is missing', async () => {
-      newUser = { email, password };
+      delete newUser.name;
       const res = await act();
       expect(res.status).toBe(400);
     });
 
     it('should return 400 if email is missing', async () => {
-      newUser = { name, password };
+      delete newUser.email;
       const res = await act();
       expect(res.status).toBe(400);
     });
@@ -60,7 +60,7 @@ describe('/api/v1/users', () => {
     });
 
     it('should return 400 if password is missing', async () => {
-      newUser = { name, email };
+      delete newUser.password;
       const res = await act();
       expect(res.status).toBe(400);
     });
@@ -101,6 +101,50 @@ describe('/api/v1/users', () => {
       it('should return message in the response', async () => {
         const res = await act();
         expect(res.body.msg).toBeTruthy();
+      });
+    });
+  });
+
+  describe('POST /me', () => {
+    let token: string;
+
+    const act = async () =>
+      await request(app)
+        .get('/api/v1/users/me')
+        .set('Authorization', `Bearer ${token}`);
+
+    beforeEach(async () => {
+      const user = await new User({
+        name: 'a',
+        email: 'a@a.com',
+        password: '123aA%'
+      }).save();
+
+      token = user.generateAccessToken();
+    });
+
+    it('should return 401 if user is not authorized', async () => {
+      token = '';
+      const res = await act();
+      expect(res.status).toBe(401);
+    });
+
+    describe('if user is authorized / SUCCESS', () => {
+      it('should return 200', async () => {
+        token = '';
+        const res = await act();
+        expect(res.status).toBe(401);
+      });
+
+      it('should return user name and email', async () => {
+        const res = await act();
+        expect(res.body.name).toBeTruthy();
+        expect(res.body.email).toBeTruthy();
+      });
+
+      it('should not return user password', async () => {
+        const res = await act();
+        expect(res.body.password).toBeFalsy();
       });
     });
   });
