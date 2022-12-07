@@ -1,8 +1,18 @@
 import mongoose from 'mongoose';
 import request from 'supertest';
 import { app } from '../../../app';
-import { User } from '../../../models/User';
+import { authMiddleware } from '../../../middleware/auth';
+import { authAdmin } from '../../../middleware/authAdmin';
+import { IUser, User } from '../../../models/User';
 import { Token } from '../../../models/Token';
+
+jest.mock('../../../middleware/auth');
+
+jest.mock('../../../middleware/authAdmin', () => {
+  return {
+    authAdmin: jest.fn((req, res, next) => next())
+  };
+});
 
 describe('/api/v1/users', () => {
   beforeAll(async () => {
@@ -105,7 +115,7 @@ describe('/api/v1/users', () => {
     });
   });
 
-  describe('POST /me', () => {
+  describe('GET /me', () => {
     let token: string;
 
     const act = async () =>
@@ -114,6 +124,11 @@ describe('/api/v1/users', () => {
         .set('Authorization', `Bearer ${token}`);
 
     beforeEach(async () => {
+      // Use the original implementation
+      (authMiddleware as jest.Mock).mockImplementation(
+        jest.requireActual('../../../middleware/auth').authMiddleware
+      );
+
       const user = await new User({
         name: 'a',
         email: 'a@a.com',
@@ -121,6 +136,10 @@ describe('/api/v1/users', () => {
       }).save();
 
       token = user.generateAccessToken();
+    });
+
+    afterEach(() => {
+      jest.clearAllMocks();
     });
 
     it('should return 401 if user is not authorized', async () => {
@@ -131,20 +150,85 @@ describe('/api/v1/users', () => {
 
     describe('if user is authorized / SUCCESS', () => {
       it('should return 200', async () => {
-        token = '';
         const res = await act();
-        expect(res.status).toBe(401);
+        expect(res.status).toBe(200);
       });
 
       it('should return user name and email', async () => {
         const res = await act();
-        expect(res.body.name).toBeTruthy();
-        expect(res.body.email).toBeTruthy();
+        expect(res.body.name).toBe('a');
+        expect(res.body.email).toBe('a@a.com');
       });
 
       it('should not return user password', async () => {
         const res = await act();
         expect(res.body.password).toBeFalsy();
+      });
+    });
+  });
+
+  describe('GET /', () => {
+    const act = async () => await request(app).get('/api/v1/users');
+
+    beforeEach(async () => {
+      // Skip user-based auth
+      (authMiddleware as jest.Mock).mockImplementation((req, res, next) =>
+        next()
+      );
+
+      // Populate the database
+      const users: Partial<IUser>[] = [
+        {
+          name: 'a',
+          email: 'a@a.com',
+          password: 'a'
+        },
+        {
+          name: 'b',
+          email: 'b@b.com',
+          password: 'b'
+        }
+      ];
+      await User.collection.insertMany(users);
+    });
+
+    afterEach(() => {
+      jest.clearAllMocks();
+    });
+
+    describe('Auth', () => {
+      it('should require user-based authorization', async () => {
+        await act();
+        expect(authMiddleware).toHaveBeenCalledTimes(1);
+      });
+
+      it('should require role-based admin authorization', async () => {
+        await act();
+        expect(authAdmin).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    describe('if user is authorized / SUCCESS', () => {
+      it('should return 200', async () => {
+        const res = await act();
+        expect(res.status).toBe(200);
+      });
+
+      it('should return user names and emails', async () => {
+        const res = await act();
+        expect(res.body.some((user: IUser) => user.name === 'a')).toBeTruthy();
+        expect(
+          res.body.some((user: IUser) => user.email === 'a@a.com')
+        ).toBeTruthy();
+        expect(res.body.some((user: IUser) => user.name === 'b')).toBeTruthy();
+        expect(
+          res.body.some((user: IUser) => user.email === 'b@b.com')
+        ).toBeTruthy();
+      });
+
+      it('should not return user passwords', async () => {
+        const res = await act();
+        expect(res.body).not.toContain((user: IUser) => user.password);
       });
     });
   });
