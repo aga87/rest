@@ -1,11 +1,12 @@
 import { Schema, model, Types } from 'mongoose';
 import Joi from 'joi';
+import { IItem } from './Item';
 
 const TAG_MAX_LENGTH = 20;
 
 export interface ITag {
   name: string;
-  items: Types.ObjectId[];
+  items: (Types.ObjectId | IItem)[];
 }
 
 export const tagSchema = new Schema<ITag>({

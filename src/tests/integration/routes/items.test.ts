@@ -6,7 +6,7 @@ import { Item, IItem } from '../../../models/Item';
 import { Tag, ITag } from '../../../models/Tag';
 
 // Mock auth middleware to bypass authorization (tested separately) (and only test if the middleware is invoked on protected routes)
-jest.mock('../../middleware/auth', () => {
+jest.mock('../../../middleware/auth', () => {
   return {
     authMiddleware: jest.fn((req, res, next) => next())
   };
