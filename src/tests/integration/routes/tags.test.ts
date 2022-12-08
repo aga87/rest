@@ -68,14 +68,15 @@ describe('/api/v1/tags', () => {
 
     it('should return all tags that belong to the user', async () => {
       const res = await act();
-      expect(res.body.some((tag: ITag) => tag.name === 'a')).toBeTruthy();
-      expect(res.body.some((tag: ITag) => tag.name === 'b')).toBeTruthy();
-      expect(res.body.some((tag: ITag) => tag.name === 'c')).toBeFalsy();
+      const { tags } = res.body;
+      expect(tags.some((tag: ITag) => tag.name === 'a')).toBeTruthy();
+      expect(tags.some((tag: ITag) => tag.name === 'b')).toBeTruthy();
+      expect(tags.some((tag: ITag) => tag.name === 'c')).toBeFalsy();
     });
 
     it('should not expose user ID in the response', async () => {
       const res = await act();
-      expect(res.body.some((tag: ITag) => tag.userId)).toBeFalsy();
+      expect(res.body.tags.some((tag: ITag) => tag.userId)).toBeFalsy();
     });
 
     it('should return 200 status code', async () => {
@@ -84,7 +85,7 @@ describe('/api/v1/tags', () => {
     });
   });
 
-  describe.only('DELETE /:id', () => {
+  describe('DELETE /:id', () => {
     let id: any;
     let itemId: Types.ObjectId;
     let item2Id: Types.ObjectId;

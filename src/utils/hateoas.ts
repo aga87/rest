@@ -103,3 +103,11 @@ export const tagsHATEOAS = () => ({
     method: 'GET'
   }
 });
+
+export const tagHATEOAS = (id = ':id') => ({
+  deleteTag: {
+    href: `${process.env.BASE_URL}/api/v1/tags/${id}`,
+    rel: 'tag',
+    method: 'DELETE'
+  }
+});

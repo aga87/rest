@@ -2,6 +2,7 @@ import mongoose, { ClientSession } from 'mongoose';
 import { RequestHandler } from 'express';
 import { Tag } from '../models/Tag';
 import { Item } from '../models/Item';
+import { selfHATEOAS, tagHATEOAS, tagsHATEOAS } from '../utils/hateoas';
 
 export const getTags: RequestHandler = async (req, res, next) => {
   try {
@@ -10,7 +11,7 @@ export const getTags: RequestHandler = async (req, res, next) => {
       .select('-__v -userId')
       .collation({ locale: 'en' }) // Makes alphabetical sort case-insensitive
       .sort({ name: 1 });
-    res.send(tags);
+    res.send({ tags, _links: [selfHATEOAS(req), tagHATEOAS().deleteTag] });
   } catch (err) {
     next(err);
   }
@@ -27,7 +28,12 @@ export const deleteTag: RequestHandler = async (req, res, next) => {
       session
     );
     if (!tag)
-      return res.status(404).send('The tag with the given ID was not found');
+      return res
+        .status(404)
+        .send({
+          err: 'The tag with the given ID was not found',
+          _links: [selfHATEOAS(req), tagsHATEOAS().tags]
+        });
     // Untag Items
     await Item.updateMany(
       {
