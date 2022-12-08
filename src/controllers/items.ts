@@ -4,9 +4,12 @@ import { Item, createItemSchema, updateItemSchema } from '../models/Item';
 import { Tag, createTagSchema } from '../models/Tag';
 import { validateSchema } from '../utils';
 
-export const getItems: RequestHandler = async (_req, res, next) => {
+export const getItems: RequestHandler = async (req, res, next) => {
   try {
-    const items = await Item.find().populate('tags', '_id name');
+    const { userId } = req.user;
+    const items = await Item.find({ userId })
+      .populate('tags', '_id name')
+      .select('-userId');
     res.send(items);
   } catch (err) {
     next(err);
@@ -16,7 +19,10 @@ export const getItems: RequestHandler = async (_req, res, next) => {
 export const getItem: RequestHandler = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const item = await Item.findById(id).populate('tags', '_id name');
+    const { userId } = req.user;
+    const item = await Item.findOne({ _id: id, userId })
+      .populate('tags', '_id name')
+      .select('-userId');
     if (!item)
       return res.status(404).send('Item with the given ID was not found.');
     res.send(item);
@@ -31,14 +37,15 @@ export const addItem: RequestHandler = async (req, res, next) => {
     validSchema: createItemSchema
   });
   if (error) return res.status(400).send(error);
-  const item = new Item(req.body);
   try {
-    const result = await item.save();
+    const { userId } = req.user;
+    const item = await new Item({ ...req.body, userId }).save();
+    const savedItem = await Item.findById(item._id).select('-userId');
     res.setHeader(
       'location',
-      `${process.env.BASE_URL}/${req.originalUrl}/${result._id}`
+      `${process.env.BASE_URL}/${req.originalUrl}/${savedItem?._id}`
     );
-    res.status(201).send(result);
+    res.status(201).send(savedItem);
   } catch (err) {
     next(err);
   }
@@ -51,9 +58,13 @@ export const updateItem: RequestHandler = async (req, res, next) => {
   });
   if (error) return res.status(400).send(error);
   try {
-    const item = await Item.findByIdAndUpdate(req.params.id, req.body, {
+    const { id } = req.params;
+    const { userId } = req.user;
+    const item = await Item.findOneAndUpdate({ _id: id, userId }, req.body, {
       new: true
-    }).populate('tags', '_id name');
+    })
+      .populate('tags', '_id name')
+      .select('-userId -__v');
     if (!item)
       return res.status(404).send('Item with the given ID was not found.');
     res.send(item);
@@ -65,7 +76,8 @@ export const updateItem: RequestHandler = async (req, res, next) => {
 export const deleteItem: RequestHandler = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const item = await Item.findByIdAndDelete(id);
+    const { userId } = req.user;
+    const item = await Item.findOneAndDelete({ _id: id, userId });
     if (!item)
       return res.status(404).send('Item with the given ID was not found.');
     res.status(204).send();
@@ -86,9 +98,11 @@ export const tagItem: RequestHandler = async (req, res, next) => {
   try {
     session.startTransaction();
     // Update or create the Tag
+    const { id } = req.params;
     const { name } = req.body;
+    const { userId } = req.user;
     const tag = await Tag.findOneAndUpdate(
-      { name },
+      { name, userId },
       {
         $setOnInsert: { name },
         $addToSet: { items: req.params.id }
@@ -97,11 +111,16 @@ export const tagItem: RequestHandler = async (req, res, next) => {
     );
 
     // Tag the Item
-    const item = await Item.findByIdAndUpdate(
-      req.params.id,
+    const item = await Item.findOneAndUpdate(
+      {
+        _id: id,
+        userId
+      },
       { $addToSet: { tags: tag._id } }, // Do not allow duplicate tags
       { new: true, runValidators: true, session }
-    ).populate('tags', '_id name');
+    )
+      .populate('tags', '_id name')
+      .select('-userId');
 
     if (!item) {
       await session.abortTransaction();
@@ -124,9 +143,10 @@ export const untagItem: RequestHandler = async (req, res, next) => {
   try {
     session.startTransaction();
     const { id, tagId } = req.params;
+    const { userId } = req.user;
     // Untag the Item
-    const item = await Item.findByIdAndUpdate(
-      id,
+    const item = await Item.findOneAndUpdate(
+      { _id: id, userId },
       { $pull: { tags: tagId } },
       {
         new: true,
@@ -140,8 +160,8 @@ export const untagItem: RequestHandler = async (req, res, next) => {
     }
 
     // Update the Tag - remove the Item reference from items
-    const tag = await Tag.findByIdAndUpdate(
-      tagId,
+    const tag = await Tag.findOneAndUpdate(
+      { _id: tagId, userId },
       { $pull: { items: id } },
       {
         new: true,

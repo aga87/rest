@@ -1,14 +1,23 @@
-import mongoose from 'mongoose';
+import mongoose, { mongo } from 'mongoose';
 import request from 'supertest';
 import { app } from '../../../app';
 import { authMiddleware } from '../../../middleware/auth';
 import { Item, IItem } from '../../../models/Item';
 import { Tag, ITag } from '../../../models/Tag';
 
+// We will use this user in all tests to test ownership-based authorization
+const userId = new mongoose.Types.ObjectId();
+
 // Mock auth middleware to bypass authorization (tested separately) (and only test if the middleware is invoked on protected routes)
 jest.mock('../../../middleware/auth', () => {
   return {
-    authMiddleware: jest.fn((req, res, next) => next())
+    authMiddleware: jest.fn((req, res, next) => {
+      // Set the user ID in the request object (to test ownership-based authorization)
+      req.user = {
+        userId
+      };
+      next();
+    })
   };
 });
 
@@ -37,11 +46,15 @@ describe('/api/v1/items', () => {
       const items: Partial<IItem>[] = [
         {
           title: 'a',
-          description: 'a'
+          userId
         },
         {
           title: 'b',
-          description: null
+          userId
+        },
+        {
+          title: 'c',
+          userId: new mongoose.Types.ObjectId()
         }
       ];
       await Item.collection.insertMany(items);
@@ -54,10 +67,16 @@ describe('/api/v1/items', () => {
       });
     });
 
-    it('should return all items', async () => {
+    it('should return all items that belong to the user', async () => {
       const res = await act();
       expect(res.body.some((item: IItem) => item.title === 'a')).toBeTruthy();
       expect(res.body.some((item: IItem) => item.title === 'b')).toBeTruthy();
+      expect(res.body.some((item: IItem) => item.title === 'c')).toBeFalsy();
+    });
+
+    it('should not expose user ID in the response', async () => {
+      const res = await act();
+      expect(res.body.some((item: IItem) => item.userId)).toBeFalsy();
     });
 
     it('should return 200 status code', async () => {
@@ -68,15 +87,14 @@ describe('/api/v1/items', () => {
 
   describe('GET /:id', () => {
     let id: any;
-    let item: any;
 
     const act = async () => await request(app).get(`/api/v1/items/${id}`);
 
     beforeEach(async () => {
       // Happy path
-      item = await new Item({
+      const item = await new Item({
         title: 'a',
-        description: 'a'
+        userId
       }).save();
 
       id = item._id;
@@ -86,6 +104,16 @@ describe('/api/v1/items', () => {
       it('should require user-based authorization', async () => {
         await act();
         expect(authMiddleware).toHaveBeenCalledTimes(1);
+      });
+
+      it('should return 404 if the item belongs to another user', async () => {
+        const item = await new Item({
+          title: 'a',
+          userId: new mongoose.Types.ObjectId()
+        }).save();
+        id = item._id;
+        const res = await act();
+        expect(res.status).toBe(404);
       });
     });
 
@@ -105,6 +133,11 @@ describe('/api/v1/items', () => {
       it('should return an item', async () => {
         const res = await act();
         expect(res.body).toHaveProperty('title', 'a');
+      });
+
+      it('should not expose user ID in the response', async () => {
+        const res = await act();
+        expect(res.body).not.toHaveProperty('userId');
       });
 
       it('should return 200 status code', async () => {
@@ -130,6 +163,11 @@ describe('/api/v1/items', () => {
 
     describe('Auth', () => {
       it('should require user-based authorization', async () => {
+        await act();
+        expect(authMiddleware).toHaveBeenCalledTimes(1);
+      });
+
+      it('should assign ownership to the item', async () => {
         await act();
         expect(authMiddleware).toHaveBeenCalledTimes(1);
       });
@@ -169,6 +207,11 @@ describe('/api/v1/items', () => {
         expect(res.body).toHaveProperty('updatedAt');
       });
 
+      it('should not expose user ID in the response', async () => {
+        const res = await act();
+        expect(res.body).not.toHaveProperty('userId');
+      });
+
       it('should return 201 status code', async () => {
         const res = await act();
         expect(res.status).toBe(201);
@@ -192,7 +235,8 @@ describe('/api/v1/items', () => {
       // Happy path
       const item = await new Item({
         title: 'a',
-        description: 'a'
+        description: 'a',
+        userId
       }).save();
 
       id = item._id;
@@ -207,6 +251,16 @@ describe('/api/v1/items', () => {
       it('should require user-based authorization', async () => {
         await act();
         expect(authMiddleware).toHaveBeenCalledTimes(1);
+      });
+
+      it('should return 404 if the item belongs to another user', async () => {
+        const itemOfAnotherUser = await new Item({
+          title: 'a',
+          userId: new mongoose.Types.ObjectId()
+        }).save();
+        id = itemOfAnotherUser._id;
+        const res = await act();
+        expect(res.status).toBe(404);
       });
     });
 
@@ -247,6 +301,11 @@ describe('/api/v1/items', () => {
         expect(res.body).toHaveProperty('description', 'c');
       });
 
+      it('should not expose user ID in the response', async () => {
+        const res = await act();
+        expect(res.body).not.toHaveProperty('userId');
+      });
+
       it('should return 200 status code', async () => {
         const res = await act();
         expect(res.status).toBe(200);
@@ -264,7 +323,7 @@ describe('/api/v1/items', () => {
       // Happy path
       const item = await new Item({
         title: 'a',
-        description: 'a'
+        userId
       }).save();
 
       id = item._id;
@@ -274,6 +333,16 @@ describe('/api/v1/items', () => {
       it('should require user-based authorization', async () => {
         await act();
         expect(authMiddleware).toHaveBeenCalledTimes(1);
+      });
+
+      it('should return 404 if the item belongs to another user', async () => {
+        const itemOfAnotherUser = await new Item({
+          title: 'a',
+          userId: new mongoose.Types.ObjectId()
+        }).save();
+        id = itemOfAnotherUser._id;
+        const res = await act();
+        expect(res.status).toBe(404);
       });
     });
 
@@ -290,7 +359,7 @@ describe('/api/v1/items', () => {
     });
 
     describe('If item with the given id exists / SUCCESS', () => {
-      it('should delete the genre', async () => {
+      it('should delete the item', async () => {
         await act();
         const itemInDB = await Item.findById(id);
         expect(itemInDB).toBeNull();
@@ -314,7 +383,7 @@ describe('/api/v1/items', () => {
     beforeEach(async () => {
       const item = await new Item({
         title: 'a',
-        description: 'a'
+        userId
       }).save();
 
       //  Happy path
@@ -328,6 +397,16 @@ describe('/api/v1/items', () => {
       it('should require user-based authorization', async () => {
         await act();
         expect(authMiddleware).toHaveBeenCalledTimes(1);
+      });
+
+      it('should return 404 if the item belongs to another user', async () => {
+        const itemOfAnotherUser = await new Item({
+          title: 'a',
+          userId: new mongoose.Types.ObjectId()
+        }).save();
+        id = itemOfAnotherUser._id;
+        const res = await act();
+        expect(res.status).toBe(404);
       });
     });
 
@@ -376,9 +455,13 @@ describe('/api/v1/items', () => {
       it('should return the tagged item', async () => {
         const res = await act();
         expect(res.body).toHaveProperty('title', 'a');
-        expect(res.body).toHaveProperty('description', 'a');
         expect(res.body.tags[0].name).toBe('tag');
         expect(res.body.tags[0]._id).not.toBeNull();
+      });
+
+      it('should not expose user ID in the response', async () => {
+        const res = await act();
+        expect(res.body).not.toHaveProperty('userId');
       });
 
       it('should return 200 status code', async () => {
@@ -397,20 +480,21 @@ describe('/api/v1/items', () => {
 
     beforeEach(async () => {
       // Happy path
-      id = new mongoose.Types.ObjectId().toHexString();
-      tagId = new mongoose.Types.ObjectId().toHexString();
+      id = new mongoose.Types.ObjectId();
+      tagId = new mongoose.Types.ObjectId();
 
       await new Item({
         _id: id,
         title: 'a',
-        description: 'a',
-        tags: [tagId]
+        tags: [tagId],
+        userId
       }).save();
 
       await new Tag({
         _id: tagId,
         name: 'tag',
-        items: [id]
+        items: [id],
+        userId
       }).save();
     });
 
@@ -418,6 +502,16 @@ describe('/api/v1/items', () => {
       it('should require user-based authorization', async () => {
         await act();
         expect(authMiddleware).toHaveBeenCalledTimes(1);
+      });
+
+      it('should return 404 if the item belongs to another user', async () => {
+        const itemOfAnotherUser = await new Item({
+          title: 'a',
+          userId: new mongoose.Types.ObjectId()
+        }).save();
+        id = itemOfAnotherUser._id;
+        const res = await act();
+        expect(res.status).toBe(404);
       });
     });
 

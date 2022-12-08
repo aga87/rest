@@ -5,10 +5,19 @@ import { authMiddleware } from '../../../middleware/auth';
 import { Item } from '../../../models/Item';
 import { Tag, ITag } from '../../../models/Tag';
 
+// We will use this user in all tests to test ownership-based authorization
+const userId = new mongoose.Types.ObjectId();
+
 // Mock auth middleware to bypass authorization (tested separately) (and only test if the middleware is invoked on protected routes)
 jest.mock('../../../middleware/auth', () => {
   return {
-    authMiddleware: jest.fn((req, res, next) => next())
+    authMiddleware: jest.fn((req, res, next) => {
+      // Set the user ID in the request object (to test ownership-based authorization)
+      req.user = {
+        userId
+      };
+      next();
+    })
   };
 });
 
@@ -35,10 +44,16 @@ describe('/api/v1/tags', () => {
       // Populate the database
       const tags: Partial<ITag>[] = [
         {
-          name: 'a'
+          name: 'a',
+          userId
         },
         {
-          name: 'b'
+          name: 'b',
+          userId
+        },
+        {
+          name: 'c',
+          userId: new mongoose.Types.ObjectId()
         }
       ];
       await Tag.collection.insertMany(tags);
@@ -51,10 +66,16 @@ describe('/api/v1/tags', () => {
       });
     });
 
-    it('should return all tags', async () => {
+    it('should return all tags that belong to the user', async () => {
       const res = await act();
       expect(res.body.some((tag: ITag) => tag.name === 'a')).toBeTruthy();
       expect(res.body.some((tag: ITag) => tag.name === 'b')).toBeTruthy();
+      expect(res.body.some((tag: ITag) => tag.name === 'c')).toBeFalsy();
+    });
+
+    it('should not expose user ID in the response', async () => {
+      const res = await act();
+      expect(res.body.some((tag: ITag) => tag.userId)).toBeFalsy();
     });
 
     it('should return 200 status code', async () => {
@@ -63,7 +84,7 @@ describe('/api/v1/tags', () => {
     });
   });
 
-  describe('DELETE /:id', () => {
+  describe.only('DELETE /:id', () => {
     let id: any;
     let itemId: Types.ObjectId;
     let item2Id: Types.ObjectId;
@@ -71,17 +92,19 @@ describe('/api/v1/tags', () => {
 
     beforeEach(async () => {
       // Populate database + define happy path
-      const tag = await new Tag({ name: 'tag' }).save();
+      const tag = await new Tag({ name: 'a', userId }).save();
       id = tag._id;
 
       const item = await new Item({
         title: 'a',
-        tags: [id]
+        tags: [id],
+        userId
       }).save();
 
       const item2 = await new Item({
-        title: 'a',
-        tags: [id]
+        title: 'b',
+        tags: [id],
+        userId
       }).save();
 
       itemId = item._id;
@@ -92,6 +115,16 @@ describe('/api/v1/tags', () => {
       it('should require user-based authorization', async () => {
         await act();
         expect(authMiddleware).toHaveBeenCalledTimes(1);
+      });
+
+      it('should return 404 if the tag belongs to another user', async () => {
+        const tagOfAnotherUser = await new Tag({
+          name: 'b',
+          userId: new mongoose.Types.ObjectId()
+        }).save();
+        id = tagOfAnotherUser._id;
+        const res = await act();
+        expect(res.status).toBe(404);
       });
     });
 
@@ -120,12 +153,18 @@ describe('/api/v1/tags', () => {
         expect(res.body).toStrictEqual({});
       });
 
-      it('should remove the reference to the tag from all items', async () => {
+      it('should remove the reference to the tag from all items that belong to the user', async () => {
+        const itemOfAnotherUser = await new Item({
+          title: 'a',
+          tags: [id],
+          userId: new mongoose.Types.ObjectId()
+        }).save();
         await act();
         const item = await Item.findById(itemId);
         const item2 = await Item.findById(item2Id);
         expect(item?.tags.length).toBe(0);
         expect(item2?.tags.length).toBe(0);
+        expect(itemOfAnotherUser.tags.length).toBe(1);
       });
     });
   });

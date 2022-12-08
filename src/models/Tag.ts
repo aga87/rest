@@ -7,13 +7,13 @@ const TAG_MAX_LENGTH = 20;
 export interface ITag {
   name: string;
   items: (Types.ObjectId | IItem)[];
+  userId: Types.ObjectId;
 }
 
 export const tagSchema = new Schema<ITag>({
   name: {
     type: String,
     required: true,
-    unique: true,
     maxLength: TAG_MAX_LENGTH,
     trim: true
   },
@@ -25,6 +25,10 @@ export const tagSchema = new Schema<ITag>({
       }
     ],
     required: true
+  },
+  userId: {
+    type: Schema.Types.ObjectId,
+    ref: 'User'
   }
 });
 
