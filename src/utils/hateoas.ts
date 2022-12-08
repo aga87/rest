@@ -63,6 +63,39 @@ export const itemsHATEOAS = () => ({
   }
 });
 
+export const itemHATEOAS = (id = ':id') => ({
+  item: {
+    href: `${process.env.BASE_URL}/api/v1/items/${id}`,
+    rel: 'item',
+    method: 'GET'
+  },
+  addItem: {
+    href: `${process.env.BASE_URL}/api/v1/items`,
+    rel: 'add item',
+    method: 'POST'
+  },
+  updateItem: {
+    href: `${process.env.BASE_URL}/api/v1/items/${id}`,
+    rel: 'update item',
+    method: 'PATCH'
+  },
+  tagItem: {
+    href: `${process.env.BASE_URL}/api/v1/items/${id}/tags`,
+    rel: 'tag item',
+    method: 'POST'
+  },
+  untagItem: {
+    href: `${process.env.BASE_URL}/api/v1/items/${id}/tags/:tagId`,
+    rel: 'untag item',
+    method: 'DELETE'
+  },
+  deleteItem: {
+    href: `${process.env.BASE_URL}/api/v1/items/${id}`,
+    rel: 'delete item',
+    method: 'DELETE'
+  }
+});
+
 export const tagsHATEOAS = () => ({
   tags: {
     href: `${process.env.BASE_URL}/api/v1/tags`,
