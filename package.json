@@ -14,11 +14,15 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@jest-mock/express": "^2.0.1",
+    "@types/bcrypt": "^5.0.0",
     "@types/express": "^4.17.14",
     "@types/jest": "^29.2.2",
+    "@types/jsonwebtoken": "^8.5.9",
     "@types/mongoose": "^5.11.97",
     "@types/morgan": "^1.9.3",
     "@types/node": "^18.11.0",
+    "@types/nodemailer": "^6.4.6",
     "@types/supertest": "^2.0.12",
     "@typescript-eslint/eslint-plugin": "^5.40.0",
     "@typescript-eslint/parser": "^5.40.0",
@@ -31,11 +35,16 @@
     "typescript": "^4.8.4"
   },
   "dependencies": {
+    "bcrypt": "^5.1.0",
+    "date-fns": "^2.29.3",
     "dotenv": "^16.0.3",
     "express": "^4.18.2",
     "joi": "^17.6.4",
+    "joi-password": "^4.0.0",
+    "jsonwebtoken": "^8.5.1",
     "mongoose": "^6.6.5",
     "morgan": "^1.10.0",
+    "nodemailer": "^6.8.0",
     "winston": "^3.8.2"
   }
 }

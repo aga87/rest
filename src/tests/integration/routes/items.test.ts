@@ -1,8 +1,25 @@
-import mongoose from 'mongoose';
+import mongoose, { mongo } from 'mongoose';
 import request from 'supertest';
-import { app } from '../../app';
-import { Item, IItem } from '../../models/Item';
-import { Tag, ITag } from '../../models/Tag';
+import { app } from '../../../app';
+import { authMiddleware } from '../../../middleware/auth';
+import { Item, IItem } from '../../../models/Item';
+import { Tag, ITag } from '../../../models/Tag';
+
+// We will use this user in all tests to test ownership-based authorization
+const userId = new mongoose.Types.ObjectId();
+
+// Mock auth middleware to bypass authorization (tested separately) (and only test if the middleware is invoked on protected routes)
+jest.mock('../../../middleware/auth', () => {
+  return {
+    authMiddleware: jest.fn((req, res, next) => {
+      // Set the user ID in the request object (to test ownership-based authorization)
+      req.user = {
+        userId
+      };
+      next();
+    })
+  };
+});
 
 describe('/api/v1/items', () => {
   beforeAll(async () => {
@@ -10,6 +27,8 @@ describe('/api/v1/items', () => {
   });
 
   afterEach(async () => {
+    // Clear mocks
+    jest.clearAllMocks();
     // Clean up the database
     await Item.deleteMany({});
     await Tag.deleteMany({});
@@ -27,20 +46,37 @@ describe('/api/v1/items', () => {
       const items: Partial<IItem>[] = [
         {
           title: 'a',
-          description: 'a'
+          userId
         },
         {
           title: 'b',
-          description: null
+          userId
+        },
+        {
+          title: 'c',
+          userId: new mongoose.Types.ObjectId()
         }
       ];
       await Item.collection.insertMany(items);
     });
 
-    it('should return all items', async () => {
+    describe('Auth', () => {
+      it('should require user-based authorization', async () => {
+        await act();
+        expect(authMiddleware).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    it('should return all items that belong to the user', async () => {
       const res = await act();
       expect(res.body.some((item: IItem) => item.title === 'a')).toBeTruthy();
       expect(res.body.some((item: IItem) => item.title === 'b')).toBeTruthy();
+      expect(res.body.some((item: IItem) => item.title === 'c')).toBeFalsy();
+    });
+
+    it('should not expose user ID in the response', async () => {
+      const res = await act();
+      expect(res.body.some((item: IItem) => item.userId)).toBeFalsy();
     });
 
     it('should return 200 status code', async () => {
@@ -51,18 +87,34 @@ describe('/api/v1/items', () => {
 
   describe('GET /:id', () => {
     let id: any;
-    let item: any;
 
     const act = async () => await request(app).get(`/api/v1/items/${id}`);
 
     beforeEach(async () => {
       // Happy path
-      item = new Item({
+      const item = await new Item({
         title: 'a',
-        description: 'a'
-      });
-      await item.save();
+        userId
+      }).save();
+
       id = item._id;
+    });
+
+    describe('Auth', () => {
+      it('should require user-based authorization', async () => {
+        await act();
+        expect(authMiddleware).toHaveBeenCalledTimes(1);
+      });
+
+      it('should return 404 if the item belongs to another user', async () => {
+        const item = await new Item({
+          title: 'a',
+          userId: new mongoose.Types.ObjectId()
+        }).save();
+        id = item._id;
+        const res = await act();
+        expect(res.status).toBe(404);
+      });
     });
 
     it('should return 404 if invalid id is passed', async () => {
@@ -83,6 +135,11 @@ describe('/api/v1/items', () => {
         expect(res.body).toHaveProperty('title', 'a');
       });
 
+      it('should not expose user ID in the response', async () => {
+        const res = await act();
+        expect(res.body).not.toHaveProperty('userId');
+      });
+
       it('should return 200 status code', async () => {
         const res = await act();
         expect(res.status).toBe(200);
@@ -96,41 +153,45 @@ describe('/api/v1/items', () => {
     const act = async () =>
       await request(app).post('/api/v1/items').send(newItem);
 
-    it('should return 400 if title is missing', async () => {
+    beforeEach(() => {
+      // Happy path
       newItem = {
+        title: 'a',
         description: 'a'
-      };
+      } as Partial<IItem>;
+    });
+
+    describe('Auth', () => {
+      it('should require user-based authorization', async () => {
+        await act();
+        expect(authMiddleware).toHaveBeenCalledTimes(1);
+      });
+
+      it('should assign ownership to the item', async () => {
+        await act();
+        expect(authMiddleware).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    it('should return 400 if title is missing', async () => {
+      delete newItem.title;
       const res = await act();
       expect(res.status).toBe(400);
     });
 
     it('should return 400 if item title is longer than 50 characters', async () => {
-      newItem = {
-        title: new Array(52).join('a'),
-        description: 'a'
-      };
+      newItem.title = new Array(52).join('a');
       const res = await act();
       expect(res.status).toBe(400);
     });
 
     it('should return 400 if item description is longer than 1000 characters', async () => {
-      newItem = {
-        title: 'a',
-        description: new Array(1002).join('a')
-      };
+      newItem.description = new Array(1002).join('a');
       const res = await act();
       expect(res.status).toBe(400);
     });
 
     describe('If the item is valid / SUCCESS', () => {
-      beforeEach(() => {
-        // Happy path
-        newItem = {
-          title: 'a',
-          description: 'a'
-        } as Partial<IItem>;
-      });
-
       it('should save the item', async () => {
         await act();
         const item = await Item.find({ title: 'a' });
@@ -144,6 +205,11 @@ describe('/api/v1/items', () => {
         expect(res.body).toHaveProperty('description', 'a');
         expect(res.body).toHaveProperty('createdAt');
         expect(res.body).toHaveProperty('updatedAt');
+      });
+
+      it('should not expose user ID in the response', async () => {
+        const res = await act();
+        expect(res.body).not.toHaveProperty('userId');
       });
 
       it('should return 201 status code', async () => {
@@ -167,30 +233,45 @@ describe('/api/v1/items', () => {
 
     beforeEach(async () => {
       // Happy path
-      const item = new Item({
+      const item = await new Item({
         title: 'a',
-        description: 'a'
-      });
-      await item.save();
+        description: 'a',
+        userId
+      }).save();
+
       id = item._id;
+
       update = {
         title: 'b',
         description: 'c'
       } as Partial<IItem>;
     });
 
+    describe('Auth', () => {
+      it('should require user-based authorization', async () => {
+        await act();
+        expect(authMiddleware).toHaveBeenCalledTimes(1);
+      });
+
+      it('should return 404 if the item belongs to another user', async () => {
+        const itemOfAnotherUser = await new Item({
+          title: 'a',
+          userId: new mongoose.Types.ObjectId()
+        }).save();
+        id = itemOfAnotherUser._id;
+        const res = await act();
+        expect(res.status).toBe(404);
+      });
+    });
+
     it('should return 400 if item title is longer than 50 characters', async () => {
-      update = {
-        title: new Array(52).join('a')
-      };
+      update.title = new Array(52).join('a');
       const res = await act();
       expect(res.status).toBe(400);
     });
 
     it('should return 400 if item description is longer than 1000 characters', async () => {
-      update = {
-        description: new Array(1002).join('a')
-      };
+      update.description = new Array(1002).join('a');
       const res = await act();
       expect(res.status).toBe(400);
     });
@@ -220,6 +301,11 @@ describe('/api/v1/items', () => {
         expect(res.body).toHaveProperty('description', 'c');
       });
 
+      it('should not expose user ID in the response', async () => {
+        const res = await act();
+        expect(res.body).not.toHaveProperty('userId');
+      });
+
       it('should return 200 status code', async () => {
         const res = await act();
         expect(res.status).toBe(200);
@@ -235,12 +321,29 @@ describe('/api/v1/items', () => {
 
     beforeEach(async () => {
       // Happy path
-      const item = new Item({
+      const item = await new Item({
         title: 'a',
-        description: 'a'
-      });
-      await item.save();
+        userId
+      }).save();
+
       id = item._id;
+    });
+
+    describe('Auth', () => {
+      it('should require user-based authorization', async () => {
+        await act();
+        expect(authMiddleware).toHaveBeenCalledTimes(1);
+      });
+
+      it('should return 404 if the item belongs to another user', async () => {
+        const itemOfAnotherUser = await new Item({
+          title: 'a',
+          userId: new mongoose.Types.ObjectId()
+        }).save();
+        id = itemOfAnotherUser._id;
+        const res = await act();
+        expect(res.status).toBe(404);
+      });
     });
 
     it('should return 404 if invalid id is passed', async () => {
@@ -256,7 +359,7 @@ describe('/api/v1/items', () => {
     });
 
     describe('If item with the given id exists / SUCCESS', () => {
-      it('should delete the genre', async () => {
+      it('should delete the item', async () => {
         await act();
         const itemInDB = await Item.findById(id);
         expect(itemInDB).toBeNull();
@@ -278,17 +381,33 @@ describe('/api/v1/items', () => {
       await request(app).post(`/api/v1/items/${id}/tags`).send(tag);
 
     beforeEach(async () => {
-      // Populate the database
-      const item = new Item({
+      const item = await new Item({
         title: 'a',
-        description: 'a'
-      });
-      await item.save();
-      // Happy path
+        userId
+      }).save();
+
+      //  Happy path
       id = item._id;
       tag = {
         name: 'tag'
       } as Partial<ITag>;
+    });
+
+    describe('Auth', () => {
+      it('should require user-based authorization', async () => {
+        await act();
+        expect(authMiddleware).toHaveBeenCalledTimes(1);
+      });
+
+      it('should return 404 if the item belongs to another user', async () => {
+        const itemOfAnotherUser = await new Item({
+          title: 'a',
+          userId: new mongoose.Types.ObjectId()
+        }).save();
+        id = itemOfAnotherUser._id;
+        const res = await act();
+        expect(res.status).toBe(404);
+      });
     });
 
     it('should return 404 if invalid id is passed', async () => {
@@ -304,9 +423,7 @@ describe('/api/v1/items', () => {
     });
 
     it('should return 400 if tag name is longer than 20 characters', async () => {
-      tag = {
-        name: new Array(22).join('a')
-      };
+      tag.name = new Array(22).join('a');
       const res = await act();
       expect(res.status).toBe(400);
     });
@@ -338,9 +455,13 @@ describe('/api/v1/items', () => {
       it('should return the tagged item', async () => {
         const res = await act();
         expect(res.body).toHaveProperty('title', 'a');
-        expect(res.body).toHaveProperty('description', 'a');
         expect(res.body.tags[0].name).toBe('tag');
         expect(res.body.tags[0]._id).not.toBeNull();
+      });
+
+      it('should not expose user ID in the response', async () => {
+        const res = await act();
+        expect(res.body).not.toHaveProperty('userId');
       });
 
       it('should return 200 status code', async () => {
@@ -359,24 +480,39 @@ describe('/api/v1/items', () => {
 
     beforeEach(async () => {
       // Happy path
-      // Save an item
-      const item = new Item({
+      id = new mongoose.Types.ObjectId();
+      tagId = new mongoose.Types.ObjectId();
+
+      await new Item({
+        _id: id,
         title: 'a',
-        description: 'a'
-      });
-      await item.save();
-      id = item._id;
+        tags: [tagId],
+        userId
+      }).save();
 
-      // Tag the item
-      await request(app).post(`/api/v1/items/${id}/tags`).send({
-        name: 'tag'
+      await new Tag({
+        _id: tagId,
+        name: 'tag',
+        items: [id],
+        userId
+      }).save();
+    });
+
+    describe('Auth', () => {
+      it('should require user-based authorization', async () => {
+        await act();
+        expect(authMiddleware).toHaveBeenCalledTimes(1);
       });
 
-      const tag = await Tag.findOne({
-        name: 'tag'
+      it('should return 404 if the item belongs to another user', async () => {
+        const itemOfAnotherUser = await new Item({
+          title: 'a',
+          userId: new mongoose.Types.ObjectId()
+        }).save();
+        id = itemOfAnotherUser._id;
+        const res = await act();
+        expect(res.status).toBe(404);
       });
-
-      tagId = tag?._id;
     });
 
     it('should return 404 if invalid id is passed', async () => {

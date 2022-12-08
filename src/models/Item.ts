@@ -8,6 +8,7 @@ export interface IItem {
   title: string;
   description: string | null;
   tags: Types.ObjectId[];
+  userId: Types.ObjectId;
 }
 
 const itemSchema = new Schema<IItem>(
@@ -33,6 +34,10 @@ const itemSchema = new Schema<IItem>(
         }
       ],
       required: true
+    },
+    userId: {
+      type: Schema.Types.ObjectId,
+      ref: 'User'
     }
   },
   { timestamps: true }

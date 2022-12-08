@@ -3,10 +3,11 @@ import { RequestHandler } from 'express';
 import { Tag } from '../models/Tag';
 import { Item } from '../models/Item';
 
-export const getTags: RequestHandler = async (_req, res, next) => {
+export const getTags: RequestHandler = async (req, res, next) => {
   try {
-    const tags = await Tag.find()
-      .select('-__v')
+    const { userId } = req.user;
+    const tags = await Tag.find({ userId })
+      .select('-__v -userId')
       .collation({ locale: 'en' }) // Makes alphabetical sort case-insensitive
       .sort({ name: 1 });
     res.send(tags);
@@ -20,14 +21,18 @@ export const deleteTag: RequestHandler = async (req, res, next) => {
   try {
     session.startTransaction();
     const { id } = req.params;
+    const { userId } = req.user;
     // Delete the Tag
-    const tag = await Tag.findByIdAndDelete(id).session(session);
+    const tag = await Tag.findOneAndDelete({ _id: id, userId }).session(
+      session
+    );
     if (!tag)
       return res.status(404).send('The tag with the given ID was not found');
     // Untag Items
     await Item.updateMany(
       {
-        tags: id
+        tags: id,
+        userId
       },
       { $pull: { tags: id } },
       { runValidators: true, session }
