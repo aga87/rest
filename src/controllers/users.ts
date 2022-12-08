@@ -75,7 +75,7 @@ export const register: RequestHandler = async (req, res, next) => {
 export const getUsers: RequestHandler = async (req, res, next) => {
   try {
     const users = await User.find().select('-password');
-    res.send(users);
+    res.send({ users, _links: [selfHATEOAS(req)] });
   } catch (err) {
     next(err);
   }
@@ -86,7 +86,7 @@ export const getMe: RequestHandler = async (req, res, next) => {
     const user = await User.findById(req.user.userId).select(
       '-password -__v -_id'
     );
-    res.send(user);
+    res.send({ user, _links: [selfHATEOAS(req)] });
   } catch (err) {
     next(err);
   }
