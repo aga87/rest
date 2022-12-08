@@ -2,7 +2,15 @@ import { RequestHandler } from 'express';
 import bcrypt from 'bcrypt';
 import { User, loginSchema } from '../models/User';
 import { Token } from '../models/Token';
-import { getHATEOAS, validateSchema } from '../utils';
+import { validateSchema } from '../utils';
+import {
+  authHATEOAS,
+  itemsHATEOAS,
+  tagsHATEOAS,
+  securityHATEOAS,
+  selfHATEOAS,
+  usersHATEOAS
+} from '../utils/hateoas';
 
 export const login: RequestHandler = async (req, res, next) => {
   const error = validateSchema({
@@ -27,16 +35,11 @@ export const login: RequestHandler = async (req, res, next) => {
     if (!user.isVerified)
       return res.status(401).send({
         msg: 'Please verify your email address before logging in.',
-        _links: getHATEOAS(req.originalUrl, [
-          {
-            href: `${process.env.BASE_URL}/api/v1/security/email-verification`,
-            rel: 'email verification'
-          },
-          {
-            href: `${process.env.BASE_URL}/api/v1/security/email-verification/new-token`,
-            rel: 'new token'
-          }
-        ])
+        _links: [
+          selfHATEOAS(req),
+          securityHATEOAS().emailVerification,
+          securityHATEOAS().verificationToken
+        ]
       });
 
     const accessToken = user.generateAccessToken();
@@ -66,20 +69,13 @@ export const login: RequestHandler = async (req, res, next) => {
           refreshToken
         }
       },
-      _links: getHATEOAS(req.originalUrl, [
-        {
-          href: `${process.env.BASE_URL}/api/v1/auth/refresh-token`,
-          rel: 'refresh token'
-        },
-        {
-          href: `${process.env.BASE_URL}/api/v1/items`,
-          rel: 'items'
-        },
-        {
-          href: `${process.env.BASE_URL}/api/v1/tags`,
-          rel: 'tags'
-        }
-      ])
+      _links: [
+        selfHATEOAS(req),
+        authHATEOAS().refreshToken,
+        usersHATEOAS().me,
+        itemsHATEOAS().items,
+        tagsHATEOAS().tags
+      ]
     });
   } catch (err) {
     next(err);
@@ -99,12 +95,7 @@ export const refreshAccessToken: RequestHandler = async (req, res, next) => {
     if (!token)
       return res.status(401).send({
         msg: 'Invalid or expired token.',
-        _links: getHATEOAS(req.originalUrl, [
-          {
-            href: `${process.env.BASE_URL}/api/v1/auth`,
-            rel: 'login'
-          }
-        ])
+        _links: [selfHATEOAS(req), authHATEOAS().login]
       });
 
     const user = await User.findById(token.userId);
@@ -115,7 +106,15 @@ export const refreshAccessToken: RequestHandler = async (req, res, next) => {
         .send('The token is valid but user does not exists.');
 
     const accessToken = user.generateAccessToken();
-    return res.status(200).send({ accessToken });
+    return res.status(200).send({
+      accessToken,
+      _links: [
+        selfHATEOAS(req),
+        usersHATEOAS().me,
+        itemsHATEOAS().items,
+        tagsHATEOAS().tags
+      ]
+    });
   } catch (err) {
     next(err);
   }

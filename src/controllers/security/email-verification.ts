@@ -2,7 +2,13 @@ import { RequestHandler } from 'express';
 import Joi from 'joi';
 import { User } from '../../models/User';
 import { Token } from '../../models/Token';
-import { getHATEOAS, sendEmail, validateSchema } from '../../utils';
+import { sendEmail, validateSchema } from '../../utils';
+import {
+  authHATEOAS,
+  securityHATEOAS,
+  selfHATEOAS,
+  usersHATEOAS
+} from '../../utils/hateoas';
 
 export const verifyUser: RequestHandler = async (req, res, next) => {
   const error = validateSchema({
@@ -23,12 +29,7 @@ export const verifyUser: RequestHandler = async (req, res, next) => {
     if (!token)
       return res.status(401).send({
         msg: 'Verification failed - invalid or expired token.',
-        _links: getHATEOAS(req.originalUrl, [
-          {
-            href: `${process.env.BASE_URL}/api/v1/security/email-verification/new-token`,
-            rel: 'new token'
-          }
-        ])
+        _links: [selfHATEOAS(req), securityHATEOAS().verificationToken]
       });
 
     const user = await User.findById(token.userId);
@@ -36,12 +37,7 @@ export const verifyUser: RequestHandler = async (req, res, next) => {
     if (!user)
       return res.status(404).send({
         msg: 'User does not exist.',
-        _links: getHATEOAS(req.originalUrl, [
-          {
-            href: `${process.env.BASE_URL}/api/v1/users`,
-            rel: 'registration'
-          }
-        ])
+        _links: [selfHATEOAS(req), usersHATEOAS().registration]
       });
 
     user.isVerified = true;
@@ -54,12 +50,7 @@ export const verifyUser: RequestHandler = async (req, res, next) => {
         name: user.name,
         email: user.email
       },
-      _links: getHATEOAS(req.originalUrl, [
-        {
-          href: `${process.env.BASE_URL}/api/v1/auth`,
-          rel: 'login'
-        }
-      ])
+      _links: [selfHATEOAS(req), authHATEOAS().login]
     });
   } catch (err) {
     next(err);
@@ -112,12 +103,7 @@ export const renewVerificationToken: RequestHandler = async (
 
     res.send({
       msg: `If a matching account exists, new verification token has been sent to ${req.body.email}`,
-      _links: getHATEOAS(req.originalUrl, [
-        {
-          href: `${process.env.BASE_URL}/api/v1/security/email-verification`,
-          rel: 'email verification'
-        }
-      ])
+      _links: [selfHATEOAS(req), securityHATEOAS().emailVerification]
     });
   } catch (err) {
     next(err);
