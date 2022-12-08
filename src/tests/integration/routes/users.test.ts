@@ -218,10 +218,6 @@ describe('/api/v1/users', () => {
         const res = await act();
         expect(res.body.some((user: IUser) => user.name === 'a')).toBeTruthy();
         expect(
-          res.body.some((user: IUser) => user.email === 'a@a.com')
-        ).toBeTruthy();
-        expect(res.body.some((user: IUser) => user.name === 'b')).toBeTruthy();
-        expect(
           res.body.some((user: IUser) => user.email === 'b@b.com')
         ).toBeTruthy();
       });
