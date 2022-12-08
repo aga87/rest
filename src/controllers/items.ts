@@ -3,6 +3,12 @@ import { RequestHandler } from 'express';
 import { Item, createItemSchema, updateItemSchema } from '../models/Item';
 import { Tag, createTagSchema } from '../models/Tag';
 import { validateSchema } from '../utils';
+import {
+  selfHATEOAS,
+  itemHATEOAS,
+  tagsHATEOAS,
+  itemsHATEOAS
+} from '../utils/hateoas';
 
 export const getItems: RequestHandler = async (req, res, next) => {
   try {
@@ -10,7 +16,15 @@ export const getItems: RequestHandler = async (req, res, next) => {
     const items = await Item.find({ userId })
       .populate('tags', '_id name')
       .select('-userId');
-    res.send(items);
+    res.send({
+      items,
+      _links: [
+        selfHATEOAS(req),
+        itemHATEOAS().item,
+        itemHATEOAS().addItem,
+        tagsHATEOAS().tags
+      ]
+    });
   } catch (err) {
     next(err);
   }
@@ -24,8 +38,21 @@ export const getItem: RequestHandler = async (req, res, next) => {
       .populate('tags', '_id name')
       .select('-userId');
     if (!item)
-      return res.status(404).send('Item with the given ID was not found.');
-    res.send(item);
+      return res.status(404).send({
+        err: 'Item with the given ID was not found.',
+        _links: [selfHATEOAS(req), itemsHATEOAS().items]
+      });
+    res.send({
+      item,
+      _links: [
+        selfHATEOAS(req),
+        itemHATEOAS(item._id.toHexString()).updateItem,
+        itemHATEOAS(item._id.toHexString()).tagItem,
+        itemHATEOAS(item._id.toHexString()).untagItem,
+        itemHATEOAS(item._id.toHexString()).deleteItem,
+        itemsHATEOAS().items
+      ]
+    });
   } catch (err) {
     next(err);
   }
@@ -45,7 +72,17 @@ export const addItem: RequestHandler = async (req, res, next) => {
       'location',
       `${process.env.BASE_URL}/${req.originalUrl}/${savedItem?._id}`
     );
-    res.status(201).send(savedItem);
+    res.status(201).send({
+      item: savedItem,
+      _links: [
+        selfHATEOAS(req),
+        itemHATEOAS(item._id.toHexString()).updateItem,
+        itemHATEOAS(item._id.toHexString()).tagItem,
+        itemHATEOAS(item._id.toHexString()).untagItem,
+        itemHATEOAS(item._id.toHexString()).deleteItem,
+        itemsHATEOAS().items
+      ]
+    });
   } catch (err) {
     next(err);
   }
@@ -66,8 +103,20 @@ export const updateItem: RequestHandler = async (req, res, next) => {
       .populate('tags', '_id name')
       .select('-userId -__v');
     if (!item)
-      return res.status(404).send('Item with the given ID was not found.');
-    res.send(item);
+      return res.status(404).send({
+        err: 'Item with the given ID was not found.',
+        _links: [selfHATEOAS(req), itemsHATEOAS().items]
+      });
+    res.send({
+      item,
+      _links: [
+        selfHATEOAS(req),
+        itemHATEOAS(item._id.toHexString()).tagItem,
+        itemHATEOAS(item._id.toHexString()).untagItem,
+        itemHATEOAS(item._id.toHexString()).deleteItem,
+        itemsHATEOAS().items
+      ]
+    });
   } catch (err) {
     next(err);
   }
@@ -79,7 +128,10 @@ export const deleteItem: RequestHandler = async (req, res, next) => {
     const { userId } = req.user;
     const item = await Item.findOneAndDelete({ _id: id, userId });
     if (!item)
-      return res.status(404).send('Item with the given ID was not found.');
+      return res.status(404).send({
+        err: 'Item with the given ID was not found.',
+        _links: [selfHATEOAS(req), itemsHATEOAS().items]
+      });
     res.status(204).send();
   } catch (err) {
     next(err);
@@ -127,7 +179,15 @@ export const tagItem: RequestHandler = async (req, res, next) => {
       return res.status(404).send('Item you want to tag does not exist.');
     }
     await session.commitTransaction();
-    res.send(item);
+    res.send({
+      item,
+      _links: [
+        selfHATEOAS(req),
+        itemHATEOAS(item._id.toHexString()).untagItem,
+        itemsHATEOAS().items,
+        tagsHATEOAS().tags
+      ]
+    });
   } catch (err) {
     await session.abortTransaction();
     session.endSession();
@@ -156,7 +216,10 @@ export const untagItem: RequestHandler = async (req, res, next) => {
     );
 
     if (!item) {
-      return res.status(404).send('Item with the given ID was not found.');
+      return res.status(404).send({
+        err: 'Item with the given ID was not found.',
+        _links: [selfHATEOAS(req), itemsHATEOAS().items]
+      });
     }
 
     // Update the Tag - remove the Item reference from items
@@ -172,7 +235,12 @@ export const untagItem: RequestHandler = async (req, res, next) => {
 
     if (!tag) {
       await session.abortTransaction();
-      return res.status(404).send('Tag with the given ID was not found.');
+      return res
+        .status(404)
+        .send({
+          err: 'Tag with the given ID was not found.',
+          _links: [selfHATEOAS(req), tagsHATEOAS().tags]
+        });
     }
 
     // If there is no items tagged with the Tag, remove the Tag altogether

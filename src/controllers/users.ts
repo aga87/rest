@@ -2,7 +2,8 @@ import { RequestHandler } from 'express';
 import bcrypt from 'bcrypt';
 import { User, createUserSchema } from '../models/User';
 import { Token } from '../models/Token';
-import { getHATEOAS, sendEmail, validateSchema } from '../utils';
+import { sendEmail, validateSchema } from '../utils';
+import { selfHATEOAS, securityHATEOAS } from '../utils/hateoas';
 
 export const register: RequestHandler = async (req, res, next) => {
   const error = validateSchema({
@@ -60,16 +61,11 @@ export const register: RequestHandler = async (req, res, next) => {
 
     res.send({
       msg: `Verification token has been sent to ${req.body.email}`,
-      _links: getHATEOAS(req.originalUrl, [
-        {
-          href: `${process.env.BASE_URL}/api/v1/security/email-verification`,
-          rel: 'email verification'
-        },
-        {
-          href: `${process.env.BASE_URL}/api/v1/security/email-verification/new-token`,
-          rel: 'new token'
-        }
-      ])
+      _links: [
+        selfHATEOAS(req),
+        securityHATEOAS().emailVerification,
+        securityHATEOAS().verificationToken
+      ]
     });
   } catch (err) {
     next(err);
@@ -79,7 +75,7 @@ export const register: RequestHandler = async (req, res, next) => {
 export const getUsers: RequestHandler = async (req, res, next) => {
   try {
     const users = await User.find().select('-password');
-    res.send(users);
+    res.send({ users, _links: [selfHATEOAS(req)] });
   } catch (err) {
     next(err);
   }
@@ -90,7 +86,7 @@ export const getMe: RequestHandler = async (req, res, next) => {
     const user = await User.findById(req.user.userId).select(
       '-password -__v -_id'
     );
-    res.send(user);
+    res.send({ user, _links: [selfHATEOAS(req)] });
   } catch (err) {
     next(err);
   }

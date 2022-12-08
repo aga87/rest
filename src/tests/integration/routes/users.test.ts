@@ -115,58 +115,6 @@ describe('/api/v1/users', () => {
     });
   });
 
-  describe('GET /me', () => {
-    let token: string;
-
-    const act = async () =>
-      await request(app)
-        .get('/api/v1/users/me')
-        .set('Authorization', `Bearer ${token}`);
-
-    beforeEach(async () => {
-      // Use the original implementation
-      (authMiddleware as jest.Mock).mockImplementation(
-        jest.requireActual('../../../middleware/auth').authMiddleware
-      );
-
-      const user = await new User({
-        name: 'a',
-        email: 'a@a.com',
-        password: '123aA%'
-      }).save();
-
-      token = user.generateAccessToken();
-    });
-
-    afterEach(() => {
-      jest.clearAllMocks();
-    });
-
-    it('should return 401 if user is not authorized', async () => {
-      token = '';
-      const res = await act();
-      expect(res.status).toBe(401);
-    });
-
-    describe('if user is authorized / SUCCESS', () => {
-      it('should return 200', async () => {
-        const res = await act();
-        expect(res.status).toBe(200);
-      });
-
-      it('should return user name and email', async () => {
-        const res = await act();
-        expect(res.body.name).toBe('a');
-        expect(res.body.email).toBe('a@a.com');
-      });
-
-      it('should not return user password', async () => {
-        const res = await act();
-        expect(res.body.password).toBeFalsy();
-      });
-    });
-  });
-
   describe('GET /', () => {
     const act = async () => await request(app).get('/api/v1/users');
 
@@ -216,15 +164,69 @@ describe('/api/v1/users', () => {
 
       it('should return user names and emails', async () => {
         const res = await act();
-        expect(res.body.some((user: IUser) => user.name === 'a')).toBeTruthy();
         expect(
-          res.body.some((user: IUser) => user.email === 'b@b.com')
+          res.body.users.some((user: IUser) => user.name === 'a')
+        ).toBeTruthy();
+        expect(
+          res.body.users.some((user: IUser) => user.email === 'b@b.com')
         ).toBeTruthy();
       });
 
       it('should not return user passwords', async () => {
         const res = await act();
         expect(res.body).not.toContain((user: IUser) => user.password);
+      });
+    });
+  });
+
+  describe('GET /me', () => {
+    let token: string;
+
+    const act = async () =>
+      await request(app)
+        .get('/api/v1/users/me')
+        .set('Authorization', `Bearer ${token}`);
+
+    beforeEach(async () => {
+      // Use the original implementation
+      (authMiddleware as jest.Mock).mockImplementation(
+        jest.requireActual('../../../middleware/auth').authMiddleware
+      );
+
+      const user = await new User({
+        name: 'a',
+        email: 'a@a.com',
+        password: '123aA%'
+      }).save();
+
+      token = user.generateAccessToken();
+    });
+
+    afterEach(() => {
+      jest.clearAllMocks();
+    });
+
+    it('should return 401 if user is not authorized', async () => {
+      token = '';
+      const res = await act();
+      expect(res.status).toBe(401);
+    });
+
+    describe('if user is authorized / SUCCESS', () => {
+      it('should return 200', async () => {
+        const res = await act();
+        expect(res.status).toBe(200);
+      });
+
+      it('should return user name and email', async () => {
+        const res = await act();
+        expect(res.body.user.name).toBe('a');
+        expect(res.body.user.email).toBe('a@a.com');
+      });
+
+      it('should not return user password', async () => {
+        const res = await act();
+        expect(res.body.password).toBeFalsy();
       });
     });
   });

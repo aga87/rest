@@ -3,7 +3,13 @@ import Joi from 'joi';
 import bcrypt from 'bcrypt';
 import { User, passwordValidator } from '../../models/User';
 import { Token } from '../../models/Token';
-import { getHATEOAS, sendEmail, validateSchema } from '../../utils';
+import { sendEmail, validateSchema } from '../../utils';
+import {
+  authHATEOAS,
+  securityHATEOAS,
+  selfHATEOAS,
+  usersHATEOAS
+} from '../../utils/hateoas';
 
 export const generatePasswordResetToken: RequestHandler = async (
   req,
@@ -51,20 +57,12 @@ export const generatePasswordResetToken: RequestHandler = async (
 
     res.send({
       msg: `If a matching account exists, a password reset token has been sent to ${req.body.email}`,
-      _links: getHATEOAS(req.originalUrl, [
-        {
-          href: `${process.env.BASE_URL}/api/v1/security/forgotten-password/reset`,
-          rel: 'reset password'
-        },
-        {
-          href: `${process.env.BASE_URL}/api/v1/auth`,
-          rel: 'login'
-        },
-        {
-          href: `${process.env.BASE_URL}/api/v1/security/email-verification`,
-          rel: 'email verification'
-        }
-      ])
+      _links: [
+        selfHATEOAS(req),
+        securityHATEOAS().passwordReset,
+        securityHATEOAS().emailVerification,
+        authHATEOAS().login
+      ]
     });
   } catch (err) {
     next(err);
@@ -88,12 +86,7 @@ export const resetPassword: RequestHandler = async (req, res, next) => {
     if (!token)
       return res.status(401).send({
         msg: 'Password reset failed - invalid or expired token.',
-        _links: getHATEOAS(req.originalUrl, [
-          {
-            href: `${process.env.BASE_URL}/api/v1/security/forgotten-password`,
-            rel: 'password reset token'
-          }
-        ])
+        _links: [selfHATEOAS(req), securityHATEOAS().passwordResetToken]
       });
 
     const user = await User.findById(token.userId);
@@ -101,12 +94,7 @@ export const resetPassword: RequestHandler = async (req, res, next) => {
     if (!user)
       return res.status(404).send({
         msg: 'User does not exist.',
-        _links: getHATEOAS(req.originalUrl, [
-          {
-            href: `${process.env.BASE_URL}/api/v1/users`,
-            rel: 'registration'
-          }
-        ])
+        _links: [selfHATEOAS(req), usersHATEOAS().registration]
       });
 
     const salt = await bcrypt.genSalt(10);
@@ -119,12 +107,7 @@ export const resetPassword: RequestHandler = async (req, res, next) => {
 
     res.send({
       msg: 'Password reset was successful.',
-      _links: getHATEOAS(req.originalUrl, [
-        {
-          href: `${process.env.BASE_URL}/api/v1/auth`,
-          rel: 'login'
-        }
-      ])
+      _links: [selfHATEOAS(req), authHATEOAS().login]
     });
   } catch (err) {
     next(err);

@@ -69,14 +69,15 @@ describe('/api/v1/items', () => {
 
     it('should return all items that belong to the user', async () => {
       const res = await act();
-      expect(res.body.some((item: IItem) => item.title === 'a')).toBeTruthy();
-      expect(res.body.some((item: IItem) => item.title === 'b')).toBeTruthy();
-      expect(res.body.some((item: IItem) => item.title === 'c')).toBeFalsy();
+      const { items } = res.body;
+      expect(items.some((item: IItem) => item.title === 'a')).toBeTruthy();
+      expect(items.some((item: IItem) => item.title === 'b')).toBeTruthy();
+      expect(items.some((item: IItem) => item.title === 'c')).toBeFalsy();
     });
 
     it('should not expose user ID in the response', async () => {
       const res = await act();
-      expect(res.body.some((item: IItem) => item.userId)).toBeFalsy();
+      expect(res.body.items.some((item: IItem) => item.userId)).toBeFalsy();
     });
 
     it('should return 200 status code', async () => {
@@ -132,7 +133,7 @@ describe('/api/v1/items', () => {
     describe('If the id is valid and the item exists / SUCCESS', () => {
       it('should return an item', async () => {
         const res = await act();
-        expect(res.body).toHaveProperty('title', 'a');
+        expect(res.body.item).toHaveProperty('title', 'a');
       });
 
       it('should not expose user ID in the response', async () => {
@@ -200,11 +201,12 @@ describe('/api/v1/items', () => {
 
       it('should return the item (with timestamps)', async () => {
         const res = await act();
-        expect(res.body).toHaveProperty('_id');
-        expect(res.body).toHaveProperty('title', 'a');
-        expect(res.body).toHaveProperty('description', 'a');
-        expect(res.body).toHaveProperty('createdAt');
-        expect(res.body).toHaveProperty('updatedAt');
+        const { item } = res.body;
+        expect(item).toHaveProperty('_id');
+        expect(item).toHaveProperty('title', 'a');
+        expect(item).toHaveProperty('description', 'a');
+        expect(item).toHaveProperty('createdAt');
+        expect(item).toHaveProperty('updatedAt');
       });
 
       it('should not expose user ID in the response', async () => {
@@ -219,7 +221,9 @@ describe('/api/v1/items', () => {
 
       it('should return the URI of the new item resource in the Location header', async () => {
         const res = await act();
-        expect(res.header.location).toContain(`/api/v1/items/${res.body._id}`);
+        expect(res.header.location).toContain(
+          `/api/v1/items/${res.body.item._id}`
+        );
       });
     });
   });
@@ -297,8 +301,9 @@ describe('/api/v1/items', () => {
 
       it('should return the updated item', async () => {
         const res = await act();
-        expect(res.body).toHaveProperty('title', 'b');
-        expect(res.body).toHaveProperty('description', 'c');
+        const { item } = res.body;
+        expect(item).toHaveProperty('title', 'b');
+        expect(item).toHaveProperty('description', 'c');
       });
 
       it('should not expose user ID in the response', async () => {
@@ -454,9 +459,10 @@ describe('/api/v1/items', () => {
 
       it('should return the tagged item', async () => {
         const res = await act();
-        expect(res.body).toHaveProperty('title', 'a');
-        expect(res.body.tags[0].name).toBe('tag');
-        expect(res.body.tags[0]._id).not.toBeNull();
+        const { item } = res.body;
+        expect(item).toHaveProperty('title', 'a');
+        expect(item.tags[0].name).toBe('tag');
+        expect(item.tags[0]._id).not.toBeNull();
       });
 
       it('should not expose user ID in the response', async () => {
