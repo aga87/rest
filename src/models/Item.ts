@@ -7,6 +7,7 @@ const DESC_MAX_LENGTH = 1000;
 export interface IItem {
   title: string;
   description: string | null;
+  imageUrl: string | null;
   tags: Types.ObjectId[];
   userId: Types.ObjectId;
 }
@@ -25,6 +26,10 @@ const itemSchema = new Schema<IItem>(
       set: (v: string) => (v === '' ? null : v),
       maxLength: DESC_MAX_LENGTH,
       trim: true
+    },
+    imageUrl: {
+      type: String || null,
+      default: null
     },
     tags: {
       type: [
