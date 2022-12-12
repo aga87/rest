@@ -89,6 +89,11 @@ export const itemHATEOAS = (id = ':id') => ({
     rel: 'untag item',
     method: 'DELETE'
   },
+  uploadItemImage: {
+    href: `${process.env.BASE_URL}/api/v1/items/${id}/image`,
+    rel: 'upload item image',
+    method: 'PUT'
+  },
   deleteItem: {
     href: `${process.env.BASE_URL}/api/v1/items/${id}`,
     rel: 'delete item',

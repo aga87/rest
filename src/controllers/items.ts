@@ -1,5 +1,6 @@
 import mongoose, { ClientSession } from 'mongoose';
 import { RequestHandler } from 'express';
+import * as cloudinary from 'cloudinary';
 import { Item, createItemSchema, updateItemSchema } from '../models/Item';
 import { Tag, createTagSchema } from '../models/Tag';
 import { validateSchema } from '../utils';
@@ -49,6 +50,7 @@ export const getItem: RequestHandler = async (req, res, next) => {
         itemHATEOAS(item._id.toHexString()).updateItem,
         itemHATEOAS(item._id.toHexString()).tagItem,
         itemHATEOAS(item._id.toHexString()).untagItem,
+        itemHATEOAS(item._id.toHexString()).uploadItemImage,
         itemHATEOAS(item._id.toHexString()).deleteItem,
         itemsHATEOAS().items
       ]
@@ -79,6 +81,7 @@ export const addItem: RequestHandler = async (req, res, next) => {
         itemHATEOAS(item._id.toHexString()).updateItem,
         itemHATEOAS(item._id.toHexString()).tagItem,
         itemHATEOAS(item._id.toHexString()).untagItem,
+        itemHATEOAS(item._id.toHexString()).uploadItemImage,
         itemHATEOAS(item._id.toHexString()).deleteItem,
         itemsHATEOAS().items
       ]
@@ -113,6 +116,7 @@ export const updateItem: RequestHandler = async (req, res, next) => {
         selfHATEOAS(req),
         itemHATEOAS(item._id.toHexString()).tagItem,
         itemHATEOAS(item._id.toHexString()).untagItem,
+        itemHATEOAS(item._id.toHexString()).uploadItemImage,
         itemHATEOAS(item._id.toHexString()).deleteItem,
         itemsHATEOAS().items
       ]
@@ -235,12 +239,10 @@ export const untagItem: RequestHandler = async (req, res, next) => {
 
     if (!tag) {
       await session.abortTransaction();
-      return res
-        .status(404)
-        .send({
-          err: 'Tag with the given ID was not found.',
-          _links: [selfHATEOAS(req), tagsHATEOAS().tags]
-        });
+      return res.status(404).send({
+        err: 'Tag with the given ID was not found.',
+        _links: [selfHATEOAS(req), tagsHATEOAS().tags]
+      });
     }
 
     // If there is no items tagged with the Tag, remove the Tag altogether
@@ -252,6 +254,53 @@ export const untagItem: RequestHandler = async (req, res, next) => {
   } catch (err) {
     await session.abortTransaction();
     session.endSession();
+    next(err);
+  }
+};
+
+export const uploadItemImage: RequestHandler = async (req, res, next) => {
+  const image = req.file;
+  if (!image) return res.status(400).send('Image is required');
+
+  try {
+    const { id } = req.params;
+    const { userId } = req.user;
+
+    const itemQuery = { _id: id, userId };
+    let item = await Item.findOne(itemQuery);
+
+    if (!item)
+      return res.status(404).send({
+        err: 'Item with the given ID was not found.',
+        _links: [selfHATEOAS(req), itemsHATEOAS().items]
+      });
+
+    // Configure Cloudinary
+    cloudinary.v2.config({
+      cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+      api_key: process.env.CLOUDINARY_API_KEY,
+      api_secret: process.env.CLOUDINARY_API_SECRET
+    });
+
+    const uploadedImage = await cloudinary.v2.uploader.upload(image.path, {
+      resource_type: 'image',
+      public_id: `uploads/image-${id}`,
+      overwrite: true,
+      invalidate: true // invalidate any cached copies
+    });
+
+    item = await Item.findOneAndUpdate(
+      itemQuery,
+      { imageUrl: uploadedImage.secure_url },
+
+      { new: true, runValidators: true }
+    ).select('-__v -userId');
+
+    res.send({
+      item,
+      _links: [selfHATEOAS(req), itemHATEOAS(id).item]
+    });
+  } catch (err) {
     next(err);
   }
 };
