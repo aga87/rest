@@ -1,5 +1,6 @@
-import mongoose, { mongo } from 'mongoose';
+import mongoose from 'mongoose';
 import request from 'supertest';
+import cloudinary from 'cloudinary';
 import { app } from '../../../app';
 import { authMiddleware } from '../../../middleware/auth';
 import { Item, IItem } from '../../../models/Item';
@@ -19,6 +20,15 @@ jest.mock('../../../middleware/auth', () => {
       next();
     })
   };
+});
+
+// Mock cloudinary upload
+jest.mock('cloudinary', () => {
+  const cloudinary = jest.requireActual('cloudinary');
+  cloudinary.v2.uploader.upload = jest.fn().mockReturnValue({
+    secure_url: 'https://test-image-url.com'
+  });
+  return cloudinary;
 });
 
 describe('/api/v1/items', () => {
@@ -562,6 +572,61 @@ describe('/api/v1/items', () => {
         await act();
         const tag = await Tag.findById(tagId);
         expect(tag).toBe(null);
+      });
+    });
+  });
+
+  describe('PUT /:id/image', () => {
+    let id: any;
+
+    const act = async () =>
+      await request(app)
+        .put(`/api/v1/items/${id}/image`)
+        .attach('image', 'src/tests/integration/img/test-img.png');
+
+    beforeEach(async () => {
+      // Happy path
+      const item = await new Item({
+        title: 'a',
+        userId
+      }).save();
+
+      id = item._id;
+    });
+
+    it('should return 404 if invalid id is passed', async () => {
+      id = 1;
+      const res = await act();
+      expect(res.status).toBe(404);
+    });
+
+    describe('Auth', () => {
+      it('should require user-based authorization', async () => {
+        await act();
+        expect(authMiddleware).toHaveBeenCalledTimes(1);
+      });
+
+      it('should return 404 if the item belongs to another user', async () => {
+        const itemOfAnotherUser = await new Item({
+          title: 'a',
+          userId: new mongoose.Types.ObjectId()
+        }).save();
+        id = itemOfAnotherUser._id;
+        const res = await act();
+        expect(res.status).toBe(404);
+      });
+
+      describe('If the id and tag are valid / SUCCESS', () => {
+        it('should return image url in the response', async () => {
+          const res = await act();
+          expect(cloudinary.v2.uploader.upload).toHaveBeenCalledTimes(1);
+          expect(res.body.item.imageUrl).toBe('https://test-image-url.com');
+        });
+
+        it('should return 200 status code', async () => {
+          const res = await act();
+          expect(res.status).toBe(200);
+        });
       });
     });
   });
