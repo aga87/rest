@@ -3,3 +3,4 @@ node_modules
 /logs
 README.md
 .DS_Store
+/uploads
