@@ -1,5 +1,4 @@
 import { Router } from 'express';
-import { validateObjectId } from '../middleware/validateObjectId';
 import {
   addItem,
   deleteItem,
@@ -7,8 +6,11 @@ import {
   getItem,
   tagItem,
   updateItem,
+  uploadItemImage,
   untagItem
 } from '../controllers/items';
+import { validateObjectId } from '../middleware/validateObjectId';
+import { uploadSingleImage } from '../middleware/multer';
 
 const router = Router();
 
@@ -25,5 +27,11 @@ router.delete('/:id', validateObjectId, deleteItem);
 router.post('/:id/tags', validateObjectId, tagItem);
 
 router.delete('/:id/tags/:tagId', validateObjectId, untagItem);
+
+router.put(
+  '/:id/image',
+  [validateObjectId, uploadSingleImage],
+  uploadItemImage
+);
 
 export { router as items };
