@@ -48,11 +48,13 @@ describe('/api/v1/items', () => {
     mongoose.connection.close();
   });
 
-  describe('GET / SUCCESS', () => {
-    const act = async () => await request(app).get('/api/v1/items');
+  describe('GET /', () => {
+    let page: string | number;
+    const act = async () =>
+      await request(app).get(`/api/v1/items?page=${page}`);
 
     beforeEach(async () => {
-      // Populate the database
+      // Happy path
       const items: Partial<IItem>[] = [
         {
           title: 'a',
@@ -68,6 +70,8 @@ describe('/api/v1/items', () => {
         }
       ];
       await Item.collection.insertMany(items);
+
+      page = 1;
     });
 
     describe('Auth', () => {
@@ -77,22 +81,30 @@ describe('/api/v1/items', () => {
       });
     });
 
-    it('should return all items that belong to the user', async () => {
+    it('should return 404 if requested page does not exist', async () => {
+      page = 2;
       const res = await act();
-      const { items } = res.body;
-      expect(items.some((item: IItem) => item.title === 'a')).toBeTruthy();
-      expect(items.some((item: IItem) => item.title === 'b')).toBeTruthy();
-      expect(items.some((item: IItem) => item.title === 'c')).toBeFalsy();
+      expect(res.status).toBe(404);
     });
 
-    it('should not expose user ID in the response', async () => {
-      const res = await act();
-      expect(res.body.items.some((item: IItem) => item.userId)).toBeFalsy();
-    });
+    describe('SUCCESS', () => {
+      it('should return all items that belong to the user', async () => {
+        const res = await act();
+        const { items } = res.body;
+        expect(items.some((item: IItem) => item.title === 'a')).toBeTruthy();
+        expect(items.some((item: IItem) => item.title === 'b')).toBeTruthy();
+        expect(items.some((item: IItem) => item.title === 'c')).toBeFalsy();
+      });
 
-    it('should return 200 status code', async () => {
-      const res = await act();
-      expect(res.status).toBe(200);
+      it('should not expose user ID in the response', async () => {
+        const res = await act();
+        expect(res.body.items.some((item: IItem) => item.userId)).toBeFalsy();
+      });
+
+      it('should return 200 status code', async () => {
+        const res = await act();
+        expect(res.status).toBe(200);
+      });
     });
   });
 
