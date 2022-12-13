@@ -3,7 +3,7 @@ import { RequestHandler } from 'express';
 import * as cloudinary from 'cloudinary';
 import { Item, createItemSchema, updateItemSchema } from '../models/Item';
 import { Tag, createTagSchema } from '../models/Tag';
-import { validateSchema } from '../utils';
+import { getPagination, validateSchema } from '../utils';
 import {
   selfHATEOAS,
   itemHATEOAS,
@@ -14,11 +14,33 @@ import {
 export const getItems: RequestHandler = async (req, res, next) => {
   try {
     const { userId } = req.user;
+    const { page, pageSize } = req.query;
+
+    const totalCount = await Item.countDocuments({ userId });
+
+    const pagination = getPagination({
+      page: page as string,
+      pageSize: pageSize as string,
+      defaultPageSize: 10,
+      maxPageSize: 25,
+      totalCount
+    });
+
+    if ('error' in pagination)
+      return res.status(404).send({
+        error: pagination.error,
+        _links: [selfHATEOAS(req), itemsHATEOAS().items]
+      });
+
     const items = await Item.find({ userId })
       .populate('tags', '_id name')
-      .select('-userId');
+      .select('-userId -__v')
+      .skip(pagination.skip)
+      .limit(pagination.pagination.pageSize);
+
     res.send({
       items,
+      pagination: pagination.pagination,
       _links: [
         selfHATEOAS(req),
         itemHATEOAS().item,
