@@ -1,7 +1,6 @@
 node_modules
 .env
 /logs
-README.md
 .DS_Store
 /uploads
 .vscode
