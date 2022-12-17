@@ -37,6 +37,7 @@ Note that this API is not complete and is intended to serve as a proof of concep
 ## Features
 
 - Token-based user authentication allows users to securely access the API using unique tokens, and ensures that only authorized users can access and manipulate data in the API.
-- CRUD (create, read, update, delete) allow users to create, retrieve, update, and delete data in the API
+- CRUD (create, read, update, delete) allow users to create, retrieve, update, and delete data in the API.
 - Error handling allows the API to gracefully handle and respond to errors, providing helpful messages and guidance to users.
 - Integration and unit tests ensure that the API is functioning correctly and provides confidence in its reliability and stability.
+- HATEOAS provides links to related resources within the responses, allowing clients to easily navigate and discover the API's capabilities without requiring external documentation.
